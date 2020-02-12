@@ -1,6 +1,7 @@
-import numpy as np
 import warnings
 from abc import abstractmethod, ABCMeta
+
+import numpy as np
 
 
 class Generator(metaclass=ABCMeta):
@@ -142,7 +143,8 @@ class LewisShedler(Generator):
         plt.ylabel('value')
         if save:
             try:
-                plt.savefig('intensity_function_' + inspect.getsource(self.intensity_function).split('return')[1].strip() + '.png')
+                plt.savefig('intensity_function_' + inspect.getsource(self.intensity_function).split('return')[
+                    1].strip() + '.png')
                 print('Saved as ' + 'intensity_function_' + inspect.getsource(self.intensity_function).split('return')[
                     1].strip() + '.png')
             except:
@@ -157,7 +159,8 @@ class LewisShedler(Generator):
         plt.ylabel('value')
         if save:
             try:
-                plt.savefig('trajectory_' + inspect.getsource(self.intensity_function).split('return')[1].strip() + '.png')
+                plt.savefig(
+                    'trajectory_' + inspect.getsource(self.intensity_function).split('return')[1].strip() + '.png')
                 print('Saved as ' + 'trajectory_' + inspect.getsource(self.intensity_function).split('return')[
                     1].strip() + '.png')
             except:
@@ -171,7 +174,8 @@ class LewisShedler(Generator):
         if save:
             try:
                 plt.savefig('points_' + inspect.getsource(self.intensity_function).split('return')[1].strip() + '.png')
-                print('Saved as ' + 'points_' + inspect.getsource(self.intensity_function).split('return')[1].strip() + '.png')
+                print('Saved as ' + 'points_' + inspect.getsource(self.intensity_function).split('return')[
+                    1].strip() + '.png')
             except:
                 warnings.warn("Saving points failed!")
         plt.show()
