@@ -1,5 +1,2 @@
 numpy==1.17.*
-pandas==0.25.*
 matplotlib==3.1.*
-numba==0.46.*
-jupyterlab==1.2.*
