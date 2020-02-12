@@ -50,13 +50,13 @@ class LewisShedler(Generator):
             raise ValueError(
                 "Maximum of intensity function must be greater than or equal to 0, found {}".format(lambda_hat))
 
-        self.intensity_function = intensity_function
+        self.intensity_function = np.vectorize(intensity_function)
         self.upper = upper
         self.lower = lower
         if lambda_hat is not None:
             self.lambda_hat = float(lambda_hat)
         else:
-            self.lambda_hat = np.max(self.intensity_function(np.linspace(self.lower, self.upper, 1e8)))
+            self.lambda_hat = np.max(self.intensity_function(np.linspace(self.lower, self.upper, int(1e8))))
         self.max_size = 5 * int(np.ceil((self.upper - self.lower) * self.lambda_hat))
 
         print('Maximum of the intensity function: {}'.format(self.lambda_hat))
