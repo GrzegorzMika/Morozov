@@ -18,11 +18,6 @@ class Generator(metaclass=ABCMeta):
 
 
 class LewisShedler(Generator):
-    intensity_function: Callable[[Union[float, np.ndarray]], Union[float, np.ndarray]]
-    max_size: float
-    lambda_hat: float
-    lower: float
-    upper: float
 
     def __init__(self, intensity_function: Callable[[Union[float, np.ndarray]], Union[float, np.ndarray]],
                  upper: float, lower: float = 0, seed: float = None, lambda_hat: float = None):
@@ -62,7 +57,7 @@ class LewisShedler(Generator):
         if lambda_hat is not None:
             self.lambda_hat = float(lambda_hat)
         else:
-            self.lambda_hat = np.max(self.intensity_function(np.linspace(self.lower, self.upper, int(1e8))))
+            self.lambda_hat = np.max(self.intensity_function(np.linspace(self.lower, self.upper, int(1e7))))
         self.max_size = int(5 * int(np.ceil((self.upper - self.lower) * self.lambda_hat)))
 
         print('Maximum of the intensity function: {}'.format(self.lambda_hat))
