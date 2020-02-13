@@ -1,27 +1,12 @@
-from functools import wraps
-
 import numpy as np
 
-
-def vectorize(otypes=None, signature=None):
-    """Numpy vectorization wrapper that works with instance methods."""
-
-    def decorator(fn):
-        vectorized = np.vectorize(fn, otypes=otypes, signature=signature)
-
-        @wraps(fn)
-        def wrapper(*args):
-            return vectorized(*args)
-
-        return wrapper
-
-    return decorator
+from decorators import vectorize
 
 
 class Estimator:
     def __init__(self, kernel, v_function, observations, sample_size):
-        self.kernel = kernel
-        self.v_function = v_function
+        self.kernel = np.vectorize(kernel)
+        self.v_function = np.vectorize(v_function)
         self.observations = observations
         self.sample_size = sample_size
 

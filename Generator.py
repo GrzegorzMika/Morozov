@@ -1,6 +1,6 @@
 import warnings
 from abc import abstractmethod, ABCMeta
-
+from typing import Callable, Union, List, Any
 import numpy as np
 
 
@@ -18,11 +18,17 @@ class Generator(metaclass=ABCMeta):
 
 
 class LewisShedler(Generator):
+    intensity_function: Callable[[Union[float, np.ndarray]], Union[float, np.ndarray]]
+    max_size: float
+    lambda_hat: float
+    lower: float
+    upper: float
 
-    def __init__(self, intensity_function, upper, lower=0, seed=None, lambda_hat=None):
+    def __init__(self, intensity_function: Callable[[Union[float, np.ndarray]], Union[float, np.ndarray]],
+                 upper: float, lower: float = 0, seed: float = None, lambda_hat: float = None):
         """
         :param intensity_function: intensity function of a simulated inhomogeneous Poisson process
-        :type intensity_function: function
+        :type intensity_function: Callable
         :param upper: upper limit of an interval on which process is simulated
         :type upper: float
         :param lower: lower limit of an interval on which process is simulated
@@ -57,67 +63,53 @@ class LewisShedler(Generator):
             self.lambda_hat = float(lambda_hat)
         else:
             self.lambda_hat = np.max(self.intensity_function(np.linspace(self.lower, self.upper, int(1e8))))
-        self.max_size = 5 * int(np.ceil((self.upper - self.lower) * self.lambda_hat))
+        self.max_size = int(5 * int(np.ceil((self.upper - self.lower) * self.lambda_hat)))
 
         print('Maximum of the intensity function: {}'.format(self.lambda_hat))
         np.random.seed(seed)
 
-    def generate(self, return_homogeneous=False):
+    def generate(self) -> np.ndarray:
         """
         Simulation of an Inhomogeneous Poisson process with bounded intensity function λ(t), on [lower, upper] using
         algorithm from "Simulation of nonhomogeneous Poisson processes by thinning." Naval Res. Logistics Quart, 26:403–
         413, 1973. Naming conventions follows "Thinning Algorithms for Simulating Point Processes" by Yuanda Chen.
         Optimized implementation for speed.
-        :param return_homogeneous: to return or not the value of the homogeneous process used to simulate
-        the values of inhomogeneous process (default: False).
-        :type return_homogeneous: boolean
         :return: numpy array containing the simulated values of inhomogeneous process, if return_homogeneous is True
         then return numpy array containing the simulated values of homogeneous process and numpy array containing
         the simulated values of inhomogeneous process
         """
-        assert isinstance(return_homogeneous, bool), 'Wrong type of argument passed to return_homogeneous!'
-        u = np.random.uniform(0, 1, self.max_size)
-        w = np.concatenate((0, -np.log(u) / self.lambda_hat), axis=None)
-        s = np.cumsum(w)
+        u: np.ndarray = np.random.uniform(0, 1, self.max_size)
+        w: np.ndarray = np.concatenate((0, -np.log(u) / self.lambda_hat), axis=None)
+        s: np.ndarray = np.cumsum(w)
         s = s[s < self.upper]
-        d = np.random.uniform(0, 1, len(s))
-        t = self.intensity_function(s) / self.lambda_hat
+        d: np.ndarray = np.random.uniform(0, 1, len(s))
+        t: np.ndarray = self.intensity_function(s) / self.lambda_hat
         t = s[(d <= t) & (t <= self.upper)]
-        if return_homogeneous:
-            return s, t
-        else:
-            return t
+        return t
 
-    def generate_slow(self, return_homogeneous=False):
+    def generate_slow(self) -> np.ndarray:
         """
         Simulation of an Inhomogeneous Poisson process with bounded intensity function λ(t), on [lower, upper] using
         algorithm from "Simulation of nonhomogeneous Poisson processes by thinning." Naval Res. Logistics Quart, 26:403–
         413, 1973. Naming conventions follows "Thinning Algorithms for Simulating Point Processes" by Yuanda Chen.
         Original implementation of an algorithm, not optimized.
-        :param return_homogeneous: to return or not the value of the homogeneous process used to simulate
-        the values of inhomogeneous process (default: False).
-        :type return_homogeneous: boolean
         :return: numpy array containing the simulated values of inhomogeneous process, if return_homogeneous is True
         then return numpy array containing the simulated values of homogeneous process and numpy array containing
         the simulated values of inhomogeneous process
         """
-        assert isinstance(return_homogeneous, bool), 'Wrong type of argument passed to return_homogeneous!'
         warnings.warn('You are using not optimized version of algorithm', RuntimeWarning)
-        t = []
-        s = []
+        t: List[Union[Union[int, float], Any]] = []
+        s: List[Union[Union[int, float], Any]] = []
         t.append(0)
         s.append(0)
         while s[-1] < (self.upper - self.lower):
-            u = np.random.uniform(0, 1, 1)[0]
-            w = -np.log(u) / self.lambda_hat
+            u: float = np.random.uniform(0, 1, 1)[0]
+            w: float = -np.log(u) / self.lambda_hat
             s.append(s[-1] + w)
-            d = np.random.uniform(0, 1, 1)[0]
+            d: float = np.random.uniform(0, 1, 1)[0]
             if d <= self.intensity_function(s[-1]) / self.lambda_hat:
                 t.append(s[-1])
-        if return_homogeneous:
-            return np.array(s), np.array(t)
-        else:
-            return np.array(t)
+        return np.array(t)
 
     def visualize(self, save=False):
         """
