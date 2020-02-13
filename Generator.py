@@ -36,13 +36,14 @@ class LewisShedler(Generator):
         super().__init__()
 
         assert callable(intensity_function), "intensity_function must be a callable!"
+        self.intensity_function = np.vectorize(intensity_function)
         assert isinstance(upper, float) | isinstance(upper, int), "Wrong type of upper limit!"
         assert isinstance(lower, float) | isinstance(lower, int), "Wrong type of lower limit!"
         if lambda_hat is not None:
             assert isinstance(lambda_hat, float) | isinstance(lambda_hat, int), "Wrong type of lambda_hat!"
         if seed is not None:
             assert isinstance(seed, float) | isinstance(seed, int), "Wrong type of seed!"
-        if np.sum(intensity_function(np.random.uniform(lower, upper, int(1e5))) < 0) > 0:
+        if np.sum(self.intensity_function(np.random.uniform(lower, upper, int(1e5))) < 0) > 0:
             raise ValueError("Intensity function must be greater than or equal to 0!")
         if lower >= upper:
             raise ValueError("Wrong interval is specified! (lower {} >= upper {})".format(lower, upper))
@@ -50,7 +51,6 @@ class LewisShedler(Generator):
             raise ValueError(
                 "Maximum of intensity function must be greater than or equal to 0, found {}".format(lambda_hat))
 
-        self.intensity_function = np.vectorize(intensity_function)
         self.upper = upper
         self.lower = lower
         if lambda_hat is not None:
