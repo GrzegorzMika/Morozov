@@ -1,6 +1,6 @@
 import numpy as np
-from multiprocessing import Pool, cpu_count
 from decorators import vectorize
+from warnings import warn
 
 
 class Quadrature:
@@ -23,15 +23,18 @@ class Operator(Quadrature):
         self.lower = lower
         self.upper = upper
         self.grid_size = grid_size
-        self.quadrature = quadrature
+        self.quadrature = getattr(super(), quadrature)
 
     def grid_list(self):
         return list(np.linspace(self.lower, self.upper, self.grid_size))
 
     def operator_column(self, t):
-        return self.kernel(self.grid_list(), t) * getattr(super(), self.quadrature)(t)
+        grid = np.linspace(self.lower, self.upper, self.grid_size)
+        return self.kernel(grid, t) * self.quadrature(t)
 
     def approximate(self):
+        if self.grid_size > 1000:
+            warn("Class method is not parallelizable and may be extremely slow", RuntimeWarning)
         grid_list = self.grid_list()
         columns = [self.operator_column(t) for t in grid_list]
         return np.stack(columns, axis=1)
