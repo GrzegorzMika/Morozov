@@ -1,6 +1,7 @@
 import numpy as np
 from decorators import vectorize
 from warnings import warn
+import ray
 
 
 class Quadrature:
@@ -34,7 +35,22 @@ class Operator(Quadrature):
 
     def approximate(self):
         if self.grid_size > 1000:
-            warn("Class method is not parallelizable and may be extremely slow", RuntimeWarning)
+            warn("Class method is not parallelizable and may be extremely slow, use wrapper instead", RuntimeWarning)
         grid_list = self.grid_list()
         columns = [self.operator_column(t) for t in grid_list]
         return np.stack(columns, axis=1)
+
+
+def approximate_operator(kernel, lower, upper, grid_size, quadrature):
+    op = Operator(kernel, 0, 1, 50000, 'rectangle')
+    @ray.remote
+    def op_col(t):
+        return op.operator_column(t)
+
+    ray.init()
+    col = [op_col.remote(t) for t in op.grid_list()]
+    col = ray.get(col)
+    ray.shutdown()
+    col = np.stack(col, axis=1)
+    # TODO Implement wrapper for parallel building of approximation
+    pass
