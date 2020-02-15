@@ -27,6 +27,7 @@ class LewisShedler(Generator):
     def __init__(self, intensity_function: Callable[[Union[float, np.ndarray]], Union[float, np.ndarray]],
                  upper: float, lower: float = 0, seed: float = None, lambda_hat: float = None):
         """
+        Generator of observations from inhomogeneous Poisson process using Lewis-Shedler algorithm.
         :param intensity_function: intensity function of a simulated inhomogeneous Poisson process
         :type intensity_function: Callable
         :param upper: upper limit of an interval on which process is simulated
@@ -43,9 +44,9 @@ class LewisShedler(Generator):
 
         assert callable(intensity_function), "intensity_function must be a callable!"
         try:
-            intensity_function(np.array([1, 2]));
+            intensity_function(np.array([1, 2]))
             self.intensity_function = intensity_function
-        except ValueError as err:
+        except ValueError:
             print('Force vectorization of intensity function')
             self.intensity_function = np.vectorize(intensity_function)
         assert isinstance(upper, float) | isinstance(upper, int), "Wrong type of upper limit!"
