@@ -2,6 +2,7 @@ import warnings
 from abc import abstractmethod, ABCMeta
 from typing import Callable, Union, List, Any
 import numpy as np
+import dask.array as da
 
 
 class Generator(metaclass=ABCMeta):
@@ -10,6 +11,10 @@ class Generator(metaclass=ABCMeta):
 
     @abstractmethod
     def generate(self):
+        ...
+
+    @abstractmethod
+    def generate_parallel(self, compute: bool = False):
         ...
 
     @abstractmethod
@@ -37,7 +42,11 @@ class LewisShedler(Generator):
         super().__init__()
 
         assert callable(intensity_function), "intensity_function must be a callable!"
-        self.intensity_function = np.vectorize(intensity_function)
+        try:
+            intensity_function(np.array([1, 2]));
+            self.intensity_function = intensity_function
+        except ValueError as err:
+            self.intensity_function = np.vectorize(intensity_function)
         assert isinstance(upper, float) | isinstance(upper, int), "Wrong type of upper limit!"
         assert isinstance(lower, float) | isinstance(lower, int), "Wrong type of lower limit!"
         if lambda_hat is not None:
@@ -69,9 +78,7 @@ class LewisShedler(Generator):
         algorithm from "Simulation of nonhomogeneous Poisson processes by thinning." Naval Res. Logistics Quart, 26:403–
         413, 1973. Naming conventions follows "Thinning Algorithms for Simulating Point Processes" by Yuanda Chen.
         Optimized implementation for speed.
-        :return: numpy array containing the simulated values of inhomogeneous process, if return_homogeneous is True
-        then return numpy array containing the simulated values of homogeneous process and numpy array containing
-        the simulated values of inhomogeneous process
+        :return: numpy array containing the simulated values of inhomogeneous process.
         """
         u: np.ndarray = np.random.uniform(0, 1, self.max_size)
         w: np.ndarray = np.concatenate((0, -np.log(u) / self.lambda_hat), axis=None)
@@ -82,15 +89,35 @@ class LewisShedler(Generator):
         t = s[(d <= t) & (t <= self.upper)]
         return t
 
+    def generate_parallel(self, compute: bool = False) -> Union[np.ndarray, da.array]:
+        """
+        Simulation of an Inhomogeneous Poisson process with bounded intensity function λ(t), on [lower, upper] using
+        algorithm from "Simulation of nonhomogeneous Poisson processes by thinning." Naval Res. Logistics Quart, 26:403–
+        413, 1973. Naming conventions follows "Thinning Algorithms for Simulating Point Processes" by Yuanda Chen.
+        Optimized implementation for speed using parallelization based on dask array.
+        :param compute: return a numpy array containing the simulated values (True) or return a graph of computations
+        :type compute: boolean
+        :return: numpy array containing the simulated values of inhomogeneous process if compute is True or a dask
+        graph of computations for generation of points.
+        """
+        u: da.array = da.random.uniform(0, 1, self.max_size)
+        w: da.array = da.concatenate([da.from_array(np.zeros((1,))), -da.log(u) / self.lambda_hat], axis=0)
+        s: da.array = da.cumsum(w)
+        s = s[s < self.upper]
+        d: da.array = da.random.uniform(0, 1, s.compute_chunk_sizes().shape[0])
+        t: da.array = self.intensity_function(s) / self.lambda_hat
+        t = s[(d <= t) & (t <= self.upper)]
+        if compute:
+            t = t.compute()
+        return t
+
     def generate_slow(self) -> np.ndarray:
         """
         Simulation of an Inhomogeneous Poisson process with bounded intensity function λ(t), on [lower, upper] using
         algorithm from "Simulation of nonhomogeneous Poisson processes by thinning." Naval Res. Logistics Quart, 26:403–
         413, 1973. Naming conventions follows "Thinning Algorithms for Simulating Point Processes" by Yuanda Chen.
         Original implementation of an algorithm, not optimized.
-        :return: numpy array containing the simulated values of inhomogeneous process, if return_homogeneous is True
-        then return numpy array containing the simulated values of homogeneous process and numpy array containing
-        the simulated values of inhomogeneous process
+        :return: numpy array containing the simulated values of inhomogeneous process.
         """
         warnings.warn('You are using not optimized version of algorithm', RuntimeWarning)
         t: List[Union[Union[int, float], Any]] = []
