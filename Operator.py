@@ -63,11 +63,16 @@ class Operator(Quadrature):
         :param quadrature: Type of quadrature used to approximate the operator.
         :type quadrature: str
         """
-        assert isinstance(lower, float) | isinstance(lower, int), "Lower limit must be number, but was {} provided".format(lower)
-        assert isinstance(upper, float) | isinstance(upper, int), "Upper limit must be a number, but was {} provided".format(upper)
+        assert isinstance(lower, float) | isinstance(lower,
+                                                     int), "Lower limit must be number, but was {} provided".format(
+            lower)
+        assert isinstance(upper, float) | isinstance(upper,
+                                                     int), "Upper limit must be a number, but was {} provided".format(
+            upper)
         assert isinstance(grid_size, int), 'Grid size must be an integer, but was {} provided'.format(grid_size)
         assert quadrature in ['rectangle', 'dummy'], 'This type of quadrature is not supported, currently only {} ' \
-                                                     'are supported'.format([method for method in dir(Quadrature) if not method.startswith('_')])
+                                                     'are supported'.format(
+            [method for method in dir(Quadrature) if not method.startswith('_')])
         assert callable(kernel), 'Kernel function must be callable'
         super().__init__(lower, upper, grid_size)
         try:
@@ -99,7 +104,6 @@ class Operator(Quadrature):
     def KH(self, KH):
         self.__KH = KH
 
-
     @property
     def __grid_list(self) -> List[float]:
         return list(np.linspace(self.lower, self.upper, self.grid_size))
@@ -125,8 +129,8 @@ class Operator(Quadrature):
         :return: Numpy array containing the approximation of the operator on given grid if compute is True, otherwise
         dask array containing the graph of computations of an approximation.
         """
-        column_list: list = [da.from_delayed(self.operator_column(t), shape=(self.grid_size,), dtype=float) for t in
-                             self.__grid_list]
+        column_list: List[da.array] = [da.from_delayed(self.operator_column(t), shape=(self.grid_size,), dtype=float)
+                                       for t in self.__grid_list]
         operator: da.array = da.stack(column_list, axis=1)
         if compute:
             operator: np.ndarray = operator.compute(num_workers=cpu_count())
