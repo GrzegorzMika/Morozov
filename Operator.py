@@ -3,7 +3,7 @@ import dask
 import dask.array as da
 import numpy as np
 from dask.system import cpu_count
-from decorators import vectorize
+from decorators import vectorize, timer
 
 
 class Quadrature:
@@ -97,6 +97,7 @@ class Operator(Quadrature):
         grid: da.array = da.linspace(self.lower, self.upper, self.grid_size)
         return self.kernel(grid, t) * self.quadrature(t)
 
+    @timer
     def approximate(self, compute: bool = False) -> Union[da.array, np.ndarray]:
         """
         Build entire approximation of an operator as matrix of size grid size x grid size.
