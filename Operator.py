@@ -1,4 +1,4 @@
-from typing import Callable, Union, List
+from typing import Callable, Union, List, Optional
 import dask
 import dask.array as da
 import numpy as np
@@ -80,6 +80,8 @@ class Operator(Quadrature):
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
         self.quadrature: Callable = getattr(super(), quadrature)
+        self.K: Optional[Union[np.ndarray, da.array]] = None
+        self.KH: Optional[Union[np.ndarray, da.array]] = None
 
     @property
     def __grid_list(self) -> List[float]:
@@ -111,4 +113,6 @@ class Operator(Quadrature):
         operator: da.array = da.stack(column_list, axis=1)
         if compute:
             operator: np.ndarray = operator.compute(num_workers=cpu_count())
+        self.K = operator
+        self.KH = operator.transpose().conj()
         return operator
