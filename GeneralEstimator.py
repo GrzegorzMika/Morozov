@@ -52,6 +52,13 @@ class Estimator(Quadrature):
         self.__q_estimator = q_estimator
 
     def estimate_q(self, compute: bool = False) -> Union[np.ndarray, da.array]:
+        """
+        Estimate function q on given grid based on the observations.
+        :param compute: Retrun estimated function as numpy array (True) or dask graph of computations (False).
+        :type compute: boolean
+        :return: Return numpy array containing estimated function q when compute is True or dask graph of computations
+        when compute is False.
+        """
         grid: da.array = da.linspace(self.lower, self.upper, self.grid_size)
         estimator: List[da.array] = [da.sum(self.kernel(x, self.observations)) / self.sample_size for x in grid]
         estimator: da.array = da.stack(estimator, axis=0)
@@ -61,7 +68,14 @@ class Estimator(Quadrature):
         self.__q_estimator = estimator
         return estimator
 
-    def estimate_delta(self, compute: bool = False)-> Union[float, da.array]:
+    def estimate_delta(self, compute: bool = False) -> Union[float, da.array]:
+        """
+        Estimate noise level based on the observations and approximation of function v.
+        :param compute: Return estimated noise level as float (True) or dask graph of computations (False).
+        :type compute: boolean
+        :return: Float indicating the estimated noise level if compute is True or dask graph of computations if
+        compute is False.
+        """
         grid: da.array= da.linspace(self.lower, self.upper, self.grid_size)
         v_function: List[da.array] = [da.sum(self.quadrature(grid) * self.kernel(grid, y) ** 2) for y in self.observations]
         v_function: da.array = da.stack(v_function, axis=0)
