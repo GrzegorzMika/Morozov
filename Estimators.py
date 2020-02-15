@@ -15,3 +15,7 @@ class Landweber(Estimator, Operator):
         self.observations = observations
         self.sample_size = sample_size
         Operator.approximate(self)
+
+    @staticmethod
+    def L2norm(x, y):
+        return da.sum((x - y) ** 2)

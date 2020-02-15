@@ -1,6 +1,9 @@
+from abc import abstractmethod
 from typing import Callable
+
 import dask.array as da
 import numpy as np
+
 from Operator import Quadrature
 
 
@@ -19,8 +22,24 @@ class Estimator(Quadrature):
         self.quadrature: Callable = getattr(super(), quadrature)
         self.observations = observations
         self.sample_size: int = sample_size
-        self.delta = None
-        self.q_estimator = None
+        self.__delta = None
+        self.__q_estimator = None
+
+    @property
+    def delta(self):
+        return self.__delta
+
+    @delta.setter
+    def delta(self, delta):
+        self.__delta = delta
+
+    @property
+    def q_estimator(self):
+        return self.__q_estimator
+
+    @q_estimator.setter
+    def q_estimator(self, q_estimator):
+        self.__q_estimator = q_estimator
 
     def estimate_q(self, compute: bool = False):
         grid = da.linspace(self.lower, self.upper, self.grid_size)
@@ -28,17 +47,19 @@ class Estimator(Quadrature):
         estimator = da.stack(estimator, axis=0)
         if compute:
             estimator = estimator.compute()
-        self.q_estimator = estimator
+        self.__q_estimator = estimator
         return estimator
 
     def estimate_delta(self, compute: bool = False):
         grid = da.linspace(self.lower, self.upper, self.grid_size)
-        v_function = [da.sum(self.quadrature(grid)*self.kernel(grid, y) ** 2) for y in self.observations]
+        v_function = [da.sum(self.quadrature(grid) * self.kernel(grid, y) ** 2) for y in self.observations]
         v_function = da.stack(v_function, axis=0)
         delta = da.sum(v_function) / self.sample_size ** 2
         if compute:
             delta = delta.compute()
-        self.delta = delta
-        return self.delta
+        self.__delta = delta
+        return delta
 
-
+    @abstractmethod
+    def estimate(self, *args, **kwargs):
+        ...
