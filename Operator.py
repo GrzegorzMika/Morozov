@@ -1,7 +1,8 @@
+import dask
+import dask.array as da
 import numpy as np
+from dask.system import cpu_count
 from decorators import vectorize
-from warnings import warn
-import ray
 
 
 class Quadrature:
@@ -16,41 +17,37 @@ class Quadrature:
             self.lower, self.upper, t)
         return (self.upper - self.lower) / self.grid_size
 
+    @vectorize(signature="(),()->()")
+    def dummy(self, t):
+        return 1
+
 
 class Operator(Quadrature):
     def __init__(self, kernel, lower, upper, grid_size, quadrature):
         super().__init__(lower, upper, grid_size)
-        self.kernel = np.vectorize(kernel)
-        self.lower = lower
-        self.upper = upper
+        try:
+            kernel(np.array([1, 2]), np.array([1, 2]));
+            self.kernel = kernel
+        except ValueError as err:
+            print('Force vectorization of kernel')
+            self.kernel = np.vectorize(kernel)
+        self.lower = float(lower)
+        self.upper = float(upper)
         self.grid_size = grid_size
         self.quadrature = getattr(super(), quadrature)
 
     def grid_list(self):
         return list(np.linspace(self.lower, self.upper, self.grid_size))
 
+    @dask.delayed
     def operator_column(self, t):
-        grid = np.linspace(self.lower, self.upper, self.grid_size)
+        grid = da.linspace(self.lower, self.upper, self.grid_size)
         return self.kernel(grid, t) * self.quadrature(t)
 
-    def approximate(self):
-        if self.grid_size > 1000:
-            warn("Class method is not parallelizable and may be extremely slow, use wrapper instead", RuntimeWarning)
-        grid_list = self.grid_list()
-        columns = [self.operator_column(t) for t in grid_list]
-        return np.stack(columns, axis=1)
-
-
-def approximate_operator(kernel, lower, upper, grid_size, quadrature):
-    op = Operator(kernel, 0, 1, 50000, 'rectangle')
-    @ray.remote
-    def op_col(t):
-        return op.operator_column(t)
-
-    ray.init()
-    col = [op_col.remote(t) for t in op.grid_list()]
-    col = ray.get(col)
-    ray.shutdown()
-    col = np.stack(col, axis=1)
-    # TODO Implement wrapper for parallel building of approximation
-    pass
+    def approximate(self, compute: bool = False):
+        operator = [da.from_delayed(self.operator_column(t), shape=(self.grid_size,), dtype=float) for t in
+                    self.grid_list()]
+        operator = da.stack(operator, axis=1)
+        if compute:
+            operator = operator.compute(num_workers=cpu_count())
+        return operator

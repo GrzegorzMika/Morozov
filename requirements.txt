@@ -4,3 +4,4 @@ dask==2.10.1
 ray[debug]==0.8.1
 aiohttp==3.6.2
 grpcio==1.27.1
+graphviz==0.13.2

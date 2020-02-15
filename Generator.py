@@ -46,6 +46,7 @@ class LewisShedler(Generator):
             intensity_function(np.array([1, 2]));
             self.intensity_function = intensity_function
         except ValueError as err:
+            print('Force vectorization of intensity function')
             self.intensity_function = np.vectorize(intensity_function)
         assert isinstance(upper, float) | isinstance(upper, int), "Wrong type of upper limit!"
         assert isinstance(lower, float) | isinstance(lower, int), "Wrong type of lower limit!"
