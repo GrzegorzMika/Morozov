@@ -80,8 +80,25 @@ class Operator(Quadrature):
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
         self.quadrature: Callable = getattr(super(), quadrature)
-        self.K: Optional[Union[np.ndarray, da.array]] = None
-        self.KH: Optional[Union[np.ndarray, da.array]] = None
+        self.__K: Optional[Union[np.ndarray, da.array]] = None
+        self.__KH: Optional[Union[np.ndarray, da.array]] = None
+
+    @property
+    def K(self):
+        return self.__K
+
+    @property
+    def KH(self):
+        return self.__KH
+
+    @K.setter
+    def K(self, K):
+        self.__K = K
+
+    @KH.setter
+    def KH(self, KH):
+        self.__KH = KH
+
 
     @property
     def __grid_list(self) -> List[float]:

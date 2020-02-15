@@ -1,14 +1,12 @@
-import numpy as np
+from typing import Callable
 import dask.array as da
-from typing import Union, Callable
-from decorators import vectorize
-import dask
-from Operator import Quadrature, Operator
+import numpy as np
+from Operator import Quadrature
 
 
 class Estimator(Quadrature):
     def __init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature):
-        super().__init__(lower, upper, grid_size)
+        Quadrature.__init__(self, lower, upper, grid_size)
         try:
             kernel(np.array([1, 2]), np.array([1, 2]))
             self.kernel: Callable = kernel
