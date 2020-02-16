@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Union
 from warnings import warn
 import dask.array as da
 import dask
@@ -12,56 +12,68 @@ from decorators import timer
 
 
 class Landweber(Estimator, Operator):
-    def __init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature, **kwargs):
+    def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
+                 observations: Union[da.array, np.ndarray], sample_size: int , quadrature: str, **kwargs):
         Operator.__init__(self, kernel, lower, upper, grid_size, quadrature)
         Estimator.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
         self.kernel: Callable = kernel
-        self.lower = lower
-        self.upper = upper
-        self.grid_size = grid_size
-        self.__observations = observations
-        self.sample_size = sample_size
-        self.relaxation = kwargs.get('relaxation')
+        self.lower: float = float(lower)
+        self.upper: float = float(upper)
+        self.grid_size: int = grid_size
+        self.__observations: Union[da.array, np.ndarray] = observations
+        self.sample_size: int = sample_size
+        self.relaxation: float = kwargs.get('relaxation')
         if self.relaxation is None:
             self.relaxation = 0.01
-        self.max_iter = kwargs.get('max_iter')
+        self.max_iter: int = kwargs.get('max_iter')
         if self.max_iter is None:
             self.max_iter = 100
-        self.initial = kwargs.get('initial_guess')
+        self.initial: Union[da.array, np.ndarray] = kwargs.get('initial_guess')
         if self.initial is None:
             self.initial = da.repeat(da.from_array(np.array([0])), self.grid_size)
-        self.previous = self.initial
-        self.current = self.initial
+        self.previous: Union[da.array, np.ndarray] = self.initial
+        self.current: Union[da.array, np.ndarray] = self.initial
         Operator.approximate(self)
-        self.KHK = np.matmul(self.KH, self.K)
+        self.KHK: Union[da.array, np.ndarray] = np.matmul(self.KH, self.K)
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
 
     @property
-    def solution(self):
+    def solution(self) -> Union[np.ndarray, da.array]:
         return self.previous
 
     @solution.setter
-    def solution(self, solution):
+    def solution(self, solution: Union[np.ndarray, da.array]):
         self.previous = solution
 
-    def L2norm(self, x, y, sqrt=False):
-        grid = da.linspace(self.lower, self.upper, self.grid_size)
-        weights = self.quadrature(grid)
+    def L2norm(self, x: Union[da.array, np.ndarray], y: Union[da.array, np.ndarray], sqrt: bool = False) -> da.array:
+        """
+        Calculate the approximation of L2 norm of difference of two approximation of function.
+        :param x: Approximation of function on given grid.
+        :type x: Union[da.array, np.ndarray]
+        :param y: Approximation of function on given grid.
+        :type y: Union[da.array, np.ndarray]
+        :param sqrt: To return the norm after taking the square root (True) or not (False).
+        :type sqrt: boolean (default: False)
+        :return: Float representing the L2 norm of difference between given functions.
+
+        """
+        grid: da.array = da.linspace(self.lower, self.upper, self.grid_size)
+        weights: np.ndarray = self.quadrature(grid)
         if sqrt:
-            norm = da.sqrt(da.sum(((x - y) ** 2) * weights))
+            norm: da.array = da.sqrt(da.sum(((x - y) ** 2) * weights))
         else:
-            norm = da.sum(((x - y) ** 2) * weights)
+            norm: da.array = da.sum(((x - y) ** 2) * weights)
         return norm
 
     @timer
-    def __iteration(self):
-        bracket = self.q_estimator - np.matmul(self.K, self.previous)
+    def __iteration(self) -> Union[np.ndarray, da.array]:
+        bracket: Union[da.array, np.ndarray] = self.q_estimator - np.matmul(self.K, self.previous)
         self.current = self.previous + self.relaxation * np.matmul(self.KH, bracket)
         return self.current
 
-    def __stopping_rule(self):
-        norm = self.L2norm(np.matmul(self.KHK, self.current), self.q_estimator).compute()
+    def __stopping_rule(self) -> bool:
+        norm: float = self.L2norm(np.matmul(self.KHK, self.current), self.q_estimator).compute()
         return norm > self.delta
 
     def __update_solution(self):
@@ -76,14 +88,13 @@ class Landweber(Estimator, Operator):
                 self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current,
                 num_workers=cpu_count())
 
-    def estimate(self, compute=False):
-        it = 1
-        start = time()
+    def estimate(self, compute: bool = False):
+        it: int = 1
+        start: float = time()
         if compute:
             print('Force computations...')
             self.__force_computations()
-        condition = self.__stopping_rule()
-        print(condition)
+        condition: bool = self.__stopping_rule()
         while condition:
             print('Iteration: {}'.format(it))
             it += 1
@@ -96,6 +107,10 @@ class Landweber(Estimator, Operator):
         print('Total elapsed time: {}'.format(time() - start))
 
     def refresh(self):
+        """
+        Allow to re-estimate the q function, noise level and the target using new observations without need to recalculate
+        the approximation of operator. To be used in conjunction with observations.setter.
+        """
         self.previous = self.initial
         self.current = self.initial
         Estimator.estimate_q(self)

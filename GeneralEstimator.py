@@ -61,7 +61,7 @@ class Estimator(Quadrature):
         """
         Estimate function q on given grid based on the observations.
         :param compute: Retrun estimated function as numpy array (True) or dask graph of computations (False).
-        :type compute: boolean
+        :type compute: boolean (default: False)
         :return: Return numpy array containing estimated function q when compute is True or dask graph of computations
         when compute is False.
         """
@@ -78,7 +78,7 @@ class Estimator(Quadrature):
         """
         Estimate noise level based on the observations and approximation of function v.
         :param compute: Return estimated noise level as float (True) or dask graph of computations (False).
-        :type compute: boolean
+        :type compute: boolean (default: False)
         :return: Float indicating the estimated noise level if compute is True or dask graph of computations if
         compute is False.
         """

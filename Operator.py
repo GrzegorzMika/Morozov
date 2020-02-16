@@ -125,7 +125,7 @@ class Operator(Quadrature):
         """
         Build entire approximation of an operator as matrix of size grid size x grid size.
         :param compute: Return approximation as dask array (False) or for computations to numpy array (True).
-        :type compute: boolean
+        :type compute: boolean (default: False)
         :return: Numpy array containing the approximation of the operator on given grid if compute is True, otherwise
         dask array containing the graph of computations of an approximation.
         """

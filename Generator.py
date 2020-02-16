@@ -33,12 +33,12 @@ class LewisShedler(Generator):
         :param upper: upper limit of an interval on which process is simulated
         :type upper: float
         :param lower: lower limit of an interval on which process is simulated
-        :type lower: float
+        :type lower: float (default: 0.)
         :param seed: seed value for replicability
-        :type seed: float
+        :type seed: float (default: None)
         :param lambda_hat: maximum of intensity function on a given interval, if None then the value is approximated
         in algorithm (default: None)
-        :type lambda_hat: float
+        :type lambda_hat: float (default: None)
         """
         super().__init__()
 
@@ -98,7 +98,7 @@ class LewisShedler(Generator):
         413, 1973. Naming conventions follows "Thinning Algorithms for Simulating Point Processes" by Yuanda Chen.
         Optimized implementation for speed using parallelization based on dask array.
         :param compute: return a numpy array containing the simulated values (True) or return a graph of computations
-        :type compute: boolean
+        :type compute: boolean (default: False)
         :return: numpy array containing the simulated values of inhomogeneous process if compute is True or a dask
         graph of computations for generation of points.
         """
@@ -140,7 +140,7 @@ class LewisShedler(Generator):
         Auxiliary function to visualize and save the visualizations of an intensity function,
         exemplary trajectory and location of points
         :param save: to save (True) or not to save (False) the visualizations
-        :type save: boolean
+        :type save: boolean (default: False)
         """
         import matplotlib.pyplot as plt
         import inspect
