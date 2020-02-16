@@ -1,8 +1,6 @@
 from typing import Callable, Union, List, Optional
-import dask
 import dask.array as da
 import numpy as np
-from dask.system import cpu_count
 from decorators import vectorize, timer
 
 
@@ -108,33 +106,26 @@ class Operator(Quadrature):
     def __grid_list(self) -> List[float]:
         return list(np.linspace(self.lower, self.upper, self.grid_size))
 
-    @dask.delayed
-    def operator_column(self, t: float) -> da.array:
+    def operator_column(self, t: float) -> np.ndarray:
         """
         Function constructing nth column of an approximation. Its value is equal to the values of the operator with
         grid as first argument, value of nth grid point weighted by quadrature weight in nth grid point.
         :param t: nth grid point, second argument to kernel function and argument to quadrature weight builder.
         :type t: float
-        :return: Dask array containing the nth column of the approximation.
+        :return: Numpy array containing the nth column of the approximation.
         """
-        grid: da.array = da.linspace(self.lower, self.upper, self.grid_size)
+        grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size)
         return self.kernel(grid, t) * self.quadrature(t)
 
     @timer
-    def approximate(self, compute: bool = False) -> Union[da.array, np.ndarray]:
+    def approximate(self) -> np.ndarray:
         """
         Build entire approximation of an operator as matrix of size grid size x grid size.
-        :param compute: Return approximation as dask array (False) or for computations to numpy array (True).
-        :type compute: boolean (default: False)
-        :return: Numpy array containing the approximation of the operator on given grid if compute is True, otherwise
-        dask array containing the graph of computations of an approximation.
+        :return: Numpy array containing the approximation of the operator on given grid.
         """
         print('Calculating approximation...')
-        column_list: List[da.array] = [da.from_delayed(self.operator_column(t), shape=(self.grid_size,), dtype=float)
-                                       for t in self.__grid_list]
-        operator: da.array = da.stack(column_list, axis=1)
-        if compute:
-            operator: np.ndarray = operator.compute(num_workers=cpu_count())
+        column_list: List[np.ndarray] = [self.operator_column(t) for t in self.__grid_list]
+        operator: np.ndarray = np.stack(column_list, axis=1)
         self.K = operator
         self.KH = operator.transpose().conj()
         return operator
