@@ -4,7 +4,6 @@ import dask.array as da
 import dask
 import numpy as np
 from time import time
-from dask.diagnostics import ProgressBar
 from dask.system import cpu_count
 from GeneralEstimator import Estimator
 from Operator import Operator
@@ -95,8 +94,7 @@ class Landweber(Estimator, Operator):
         """
         self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current = dask.optimize(
             self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current)
-        with ProgressBar():
-            self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current = dask.compute(
+        self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current = dask.compute(
                 self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current,
                 num_workers=cpu_count())
 

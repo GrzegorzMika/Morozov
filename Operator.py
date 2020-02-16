@@ -2,7 +2,6 @@ from typing import Callable, Union, List, Optional
 import dask
 import dask.array as da
 import numpy as np
-from dask.diagnostics import ProgressBar
 from dask.system import cpu_count
 from decorators import vectorize, timer
 
@@ -130,12 +129,12 @@ class Operator(Quadrature):
         :return: Numpy array containing the approximation of the operator on given grid if compute is True, otherwise
         dask array containing the graph of computations of an approximation.
         """
+        print('Calculating approximation...')
         column_list: List[da.array] = [da.from_delayed(self.operator_column(t), shape=(self.grid_size,), dtype=float)
                                        for t in self.__grid_list]
         operator: da.array = da.stack(column_list, axis=1)
         if compute:
-            with ProgressBar():
-                operator: np.ndarray = operator.compute(num_workers=cpu_count())
+            operator: np.ndarray = operator.compute(num_workers=cpu_count())
         self.K = operator
         self.KH = operator.transpose().conj()
         return operator

@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Callable, Union, Optional, List
 import dask.array as da
-from dask.diagnostics import ProgressBar
+from dask.system import cpu_count
 import numpy as np
 from Operator import Quadrature
 from decorators import timer
@@ -68,13 +68,16 @@ class Estimator(Quadrature):
         :return: Return numpy array containing estimated function q when compute is True or dask graph of computations
         when compute is False.
         """
-        grid: da.array = da.linspace(self.lower, self.upper, self.grid_size)
-        estimator: List[da.array] = [da.sum(self.kernel(x, self.__observations)) / self.sample_size for x in grid]
-        estimator: da.array = da.stack(estimator, axis=0)
+        print('Estimating q...')
+        grid = np.linspace(self.lower, self.upper, self.grid_size)
+        estimator = [np.sum(self.kernel(x, self.__observations)) / self.sample_size for x in grid]
+        estimator = np.stack(estimator, axis=0)
         if compute:
             # noinspection PyUnresolvedReferences
-            with ProgressBar():
-                estimator: np.ndarray = estimator.compute()
+            try:
+                estimator: np.ndarray = estimator.compute(num_workers=cpu_count())
+            except:
+                pass
         self.__q_estimator = estimator
         return estimator
 
@@ -87,15 +90,19 @@ class Estimator(Quadrature):
         :return: Float indicating the estimated noise level if compute is True or dask graph of computations if
         compute is False.
         """
-        grid: da.array = da.linspace(self.lower, self.upper, self.grid_size)
-        v_function: List[da.array] = [da.sum(self.quadrature(grid) * self.kernel(grid, y) ** 2) for y in self.__observations]
-        v_function: da.array = da.stack(v_function, axis=0)
-        delta: da.array = da.sum(v_function) / (self.sample_size ** 2)
+        print('Estimating noise level...')
+        grid = np.linspace(self.lower, self.upper, self.grid_size)
+        v_function = [np.sum(self.quadrature(grid) * self.kernel(grid, y) ** 2) for y in self.__observations]
+        v_function = np.stack(v_function, axis=0)
+        delta = np.sum(v_function) / (self.sample_size ** 2)
         if compute:
             # noinspection PyUnresolvedReferences
-            with ProgressBar():
-                delta: float = delta.compute()
+            try:
+                delta: float = delta.compute(num_workers=cpu_count())
+            except:
+                pass
         self.__delta = delta
+        print('Estimated noise level: {}'.format(delta))
         return delta
 
     @abstractmethod
