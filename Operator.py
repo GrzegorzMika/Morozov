@@ -123,7 +123,7 @@ class Operator(Quadrature):
         Build entire approximation of an operator as matrix of size grid size x grid size.
         :return: Numpy array containing the approximation of the operator on given grid.
         """
-        print('Calculating approximation...')
+        print('Calculating operator approximation...')
         column_list: List[np.ndarray] = [self.operator_column(t) for t in self.__grid_list]
         operator: np.ndarray = np.stack(column_list, axis=1)
         self.K = operator

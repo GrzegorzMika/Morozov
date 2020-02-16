@@ -63,7 +63,7 @@ class Estimator(Quadrature):
         Estimate function q on given grid based on the observations.
         :return: Return numpy array containing estimated function q.
         """
-        print('Estimating q...')
+        print('Estimating q function...')
         grid = np.linspace(self.lower, self.upper, self.grid_size)
         estimator = [np.sum(self.kernel(x, self.__observations)) / self.sample_size for x in grid]
         estimator = np.stack(estimator, axis=0)

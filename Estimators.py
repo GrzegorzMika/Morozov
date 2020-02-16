@@ -30,7 +30,8 @@ class Landweber(Estimator, Operator):
         self.previous: np.ndarray = self.initial
         self.current: np.ndarray = self.initial
         Operator.approximate(self)
-        self.KHK: np.ndarray = np.matmul(self.KH, self.K)
+        self.KHK: np.ndarray = np.zeros((self.grid_size, self.grid_size))
+        np.matmul(self.KH, self.K, out=self.KHK)
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
 
