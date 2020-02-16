@@ -93,8 +93,8 @@ class Landweber(Estimator, Operator):
         """
         Force computations of all dask computation graphs.
         """
-        self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current = dask.optimize(
-            self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current)
+        # self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current = dask.optimize(
+        #     self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current)
         with ProgressBar():
             self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current = dask.compute(
                 self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current,

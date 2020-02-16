@@ -15,7 +15,7 @@ def kernel(x, y):
 
 generator = LewisShedler(lam, lower=0, upper=1)
 observations = generator.generate()
-landwerber = Landweber(kernel, lower=, upper=1, grid_size=10000, observations=observations,
+landwerber = Landweber(kernel, lower=0, upper=1, grid_size=10000, observations=observations,
                        sample_size=n_size, relaxation=0.05, max_iter=1000)
 
 solutions = []

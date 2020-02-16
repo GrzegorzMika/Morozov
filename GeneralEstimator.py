@@ -3,6 +3,7 @@ from typing import Callable, Union, Optional, List
 import dask.array as da
 import numpy as np
 from Operator import Quadrature
+from decorators import timer
 
 
 class Estimator(Quadrature):
@@ -57,6 +58,7 @@ class Estimator(Quadrature):
     def observations(self, observations: Union[np.ndarray, da.array]):
         self.__observations = observations
 
+    @timer    
     def estimate_q(self, compute: bool = False) -> Union[np.ndarray, da.array]:
         """
         Estimate function q on given grid based on the observations.
@@ -74,6 +76,7 @@ class Estimator(Quadrature):
         self.__q_estimator = estimator
         return estimator
 
+    @timer
     def estimate_delta(self, compute: bool = False) -> Union[float, da.array]:
         """
         Estimate noise level based on the observations and approximation of function v.
