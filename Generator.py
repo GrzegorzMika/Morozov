@@ -13,10 +13,6 @@ class Generator(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def generate_parallel(self, compute: bool = False):
-        ...
-
-    @abstractmethod
     def visualize(self):
         ...
 
