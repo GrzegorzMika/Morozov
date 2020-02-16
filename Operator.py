@@ -2,6 +2,7 @@ from typing import Callable, Union, List, Optional
 import dask
 import dask.array as da
 import numpy as np
+from dask.diagnostics import ProgressBar
 from dask.system import cpu_count
 from decorators import vectorize, timer
 
@@ -133,7 +134,8 @@ class Operator(Quadrature):
                                        for t in self.__grid_list]
         operator: da.array = da.stack(column_list, axis=1)
         if compute:
-            operator: np.ndarray = operator.compute(num_workers=cpu_count())
+            with ProgressBar():
+                operator: np.ndarray = operator.compute(num_workers=cpu_count())
         self.K = operator
         self.KH = operator.transpose().conj()
         return operator

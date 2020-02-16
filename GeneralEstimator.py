@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from typing import Callable, Union, Optional, List
 import dask.array as da
+from dask.diagnostics import ProgressBar
 import numpy as np
 from Operator import Quadrature
 from decorators import timer
@@ -72,7 +73,8 @@ class Estimator(Quadrature):
         estimator: da.array = da.stack(estimator, axis=0)
         if compute:
             # noinspection PyUnresolvedReferences
-            estimator: np.ndarray = estimator.compute()
+            with ProgressBar():
+                estimator: np.ndarray = estimator.compute()
         self.__q_estimator = estimator
         return estimator
 
@@ -91,7 +93,8 @@ class Estimator(Quadrature):
         delta: da.array = da.sum(v_function) / (self.sample_size ** 2)
         if compute:
             # noinspection PyUnresolvedReferences
-            delta: float = delta.compute()
+            with ProgressBar():
+                delta: float = delta.compute()
         self.__delta = delta
         return delta
 

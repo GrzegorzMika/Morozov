@@ -33,7 +33,7 @@ class Landweber(Estimator, Operator):
             self.initial = np.repeat(np.array([0]), self.grid_size)
         self.previous: Union[da.array, np.ndarray] = self.initial
         self.current: Union[da.array, np.ndarray] = self.initial
-        Operator.approximate(self)
+        Operator.approximate(self, compute=True)
         self.KHK: Union[da.array, np.ndarray] = np.matmul(self.KH, self.K)
         Estimator.estimate_q(self, compute=True)
         Estimator.estimate_delta(self, compute=True)
