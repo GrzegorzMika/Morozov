@@ -1,9 +1,7 @@
 from abc import abstractmethod
 from typing import Callable, Union, Optional, List
-
 import dask.array as da
 import numpy as np
-
 from Operator import Quadrature
 
 
@@ -30,7 +28,7 @@ class Estimator(Quadrature):
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
         self.quadrature: Callable = getattr(super(), quadrature)
-        self.observations = observations
+        self.__observations = observations
         self.sample_size: int = sample_size
         self.__delta: Optional[float] = None
         self.__q_estimator: Optional[Union[np.ndarray, da.array]] = None
@@ -51,6 +49,14 @@ class Estimator(Quadrature):
     def q_estimator(self, q_estimator: Union[np.ndarray, da.array]):
         self.__q_estimator = q_estimator
 
+    @property
+    def observations(self) -> Union[np.ndarray, da.array]:
+        return self.__observations
+
+    @observations.setter
+    def observations(self, observations: Union[np.ndarray, da.array]):
+        self.__observations = observations
+
     def estimate_q(self, compute: bool = False) -> Union[np.ndarray, da.array]:
         """
         Estimate function q on given grid based on the observations.
@@ -60,7 +66,7 @@ class Estimator(Quadrature):
         when compute is False.
         """
         grid: da.array = da.linspace(self.lower, self.upper, self.grid_size)
-        estimator: List[da.array] = [da.sum(self.kernel(x, self.observations)) / self.sample_size for x in grid]
+        estimator: List[da.array] = [da.sum(self.kernel(x, self.__observations)) / self.sample_size for x in grid]
         estimator: da.array = da.stack(estimator, axis=0)
         if compute:
             # noinspection PyUnresolvedReferences
@@ -77,7 +83,7 @@ class Estimator(Quadrature):
         compute is False.
         """
         grid: da.array= da.linspace(self.lower, self.upper, self.grid_size)
-        v_function: List[da.array] = [da.sum(self.quadrature(grid) * self.kernel(grid, y) ** 2) for y in self.observations]
+        v_function: List[da.array] = [da.sum(self.quadrature(grid) * self.kernel(grid, y) ** 2) for y in self.__observations]
         v_function: da.array = da.stack(v_function, axis=0)
         delta: da.array= da.sum(v_function) / self.sample_size ** 2
         if compute:
