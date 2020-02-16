@@ -2,7 +2,6 @@ import warnings
 from abc import abstractmethod, ABCMeta
 from typing import Callable, Union, List, Any
 import numpy as np
-import dask.array as da
 
 
 class Generator(metaclass=ABCMeta):
@@ -89,28 +88,6 @@ class LewisShedler(Generator):
         d: np.ndarray = np.random.uniform(0, 1, len(s))
         t: np.ndarray = self.intensity_function(s) / self.lambda_hat
         t = s[(d <= t) & (t <= self.upper)]
-        return t
-
-    def generate_parallel(self, compute: bool = False) -> Union[np.ndarray, da.array]:
-        """
-        Simulation of an Inhomogeneous Poisson process with bounded intensity function λ(t), on [lower, upper] using
-        algorithm from "Simulation of nonhomogeneous Poisson processes by thinning." Naval Res. Logistics Quart, 26:403–
-        413, 1973. Naming conventions follows "Thinning Algorithms for Simulating Point Processes" by Yuanda Chen.
-        Optimized implementation for speed using parallelization based on dask array.
-        :param compute: return a numpy array containing the simulated values (True) or return a graph of computations
-        :type compute: boolean (default: False)
-        :return: numpy array containing the simulated values of inhomogeneous process if compute is True or a dask
-        graph of computations for generation of points.
-        """
-        u: da.array = da.random.uniform(0, 1, self.max_size)
-        w: da.array = da.concatenate([da.from_array(np.zeros((1,))), -da.log(u) / self.lambda_hat], axis=0)
-        s: da.array = da.cumsum(w)
-        s = s[s < self.upper]
-        d: da.array = da.random.uniform(0, 1, s.compute_chunk_sizes().shape[0])
-        t: da.array = self.intensity_function(s) / self.lambda_hat
-        t = s[(d <= t) & (t <= self.upper)]
-        if compute:
-            t = t.compute()
         return t
 
     def generate_slow(self) -> np.ndarray:
