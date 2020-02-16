@@ -1,7 +1,5 @@
 from abc import abstractmethod
-from typing import Callable, Union, Optional, List
-import dask.array as da
-from dask.system import cpu_count
+from typing import Callable, Union, Optional
 import numpy as np
 from Operator import Quadrature
 from decorators import timer
@@ -33,7 +31,7 @@ class Estimator(Quadrature):
         self.__observations = observations
         self.sample_size: int = sample_size
         self.__delta: Optional[float] = None
-        self.__q_estimator: Optional[Union[np.ndarray, da.array]] = None
+        self.__q_estimator: Optional[np.ndarray] = None
 
     @property
     def delta(self) -> float:
@@ -44,63 +42,45 @@ class Estimator(Quadrature):
         self.__delta = delta
 
     @property
-    def q_estimator(self) -> Union[np.ndarray, da.array]:
+    def q_estimator(self) -> np.ndarray:
         return self.__q_estimator
 
     @q_estimator.setter
-    def q_estimator(self, q_estimator: Union[np.ndarray, da.array]):
+    def q_estimator(self, q_estimator: np.ndarray):
         self.__q_estimator = q_estimator
 
     @property
-    def observations(self) -> Union[np.ndarray, da.array]:
+    def observations(self) -> np.ndarray:
         return self.__observations
 
     @observations.setter
-    def observations(self, observations: Union[np.ndarray, da.array]):
+    def observations(self, observations: np.ndarray):
         self.__observations = observations
 
     @timer    
-    def estimate_q(self, compute: bool = False) -> Union[np.ndarray, da.array]:
+    def estimate_q(self) -> np.ndarray:
         """
         Estimate function q on given grid based on the observations.
-        :param compute: Retrun estimated function as numpy array (True) or dask graph of computations (False).
-        :type compute: boolean (default: False)
-        :return: Return numpy array containing estimated function q when compute is True or dask graph of computations
-        when compute is False.
+        :return: Return numpy array containing estimated function q.
         """
         print('Estimating q...')
         grid = np.linspace(self.lower, self.upper, self.grid_size)
         estimator = [np.sum(self.kernel(x, self.__observations)) / self.sample_size for x in grid]
         estimator = np.stack(estimator, axis=0)
-        if compute:
-            # noinspection PyUnresolvedReferences
-            try:
-                estimator: np.ndarray = estimator.compute(num_workers=cpu_count())
-            except:
-                pass
         self.__q_estimator = estimator
         return estimator
 
     @timer
-    def estimate_delta(self, compute: bool = False) -> Union[float, da.array]:
+    def estimate_delta(self) -> Union[float, np.ndarray]:
         """
         Estimate noise level based on the observations and approximation of function v.
-        :param compute: Return estimated noise level as float (True) or dask graph of computations (False).
-        :type compute: boolean (default: False)
-        :return: Float indicating the estimated noise level if compute is True or dask graph of computations if
-        compute is False.
+        :return: Float indicating the estimated noise level.
         """
         print('Estimating noise level...')
         grid = np.linspace(self.lower, self.upper, self.grid_size)
         v_function = [np.sum(self.quadrature(grid) * self.kernel(grid, y) ** 2) for y in self.__observations]
         v_function = np.stack(v_function, axis=0)
         delta = np.sum(v_function) / (self.sample_size ** 2)
-        if compute:
-            # noinspection PyUnresolvedReferences
-            try:
-                delta: float = delta.compute(num_workers=cpu_count())
-            except:
-                pass
         self.__delta = delta
         print('Estimated noise level: {}'.format(delta))
         return delta
