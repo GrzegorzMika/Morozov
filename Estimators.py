@@ -30,13 +30,13 @@ class Landweber(Estimator, Operator):
             self.max_iter = 100
         self.initial: Union[da.array, np.ndarray] = kwargs.get('initial_guess')
         if self.initial is None:
-            self.initial = da.repeat(da.from_array(np.array([0])), self.grid_size)
+            self.initial = np.repeat(np.array([0]), self.grid_size)
         self.previous: Union[da.array, np.ndarray] = self.initial
         self.current: Union[da.array, np.ndarray] = self.initial
         Operator.approximate(self)
         self.KHK: Union[da.array, np.ndarray] = np.matmul(self.KH, self.K)
-        Estimator.estimate_q(self)
-        Estimator.estimate_delta(self)
+        Estimator.estimate_q(self, compute=True)
+        Estimator.estimate_delta(self, compute=True)
 
     @property
     def solution(self) -> Union[np.ndarray, da.array]:
@@ -93,8 +93,8 @@ class Landweber(Estimator, Operator):
         """
         Force computations of all dask computation graphs.
         """
-        # self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current = dask.optimize(
-        #     self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current)
+        self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current = dask.optimize(
+            self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current)
         with ProgressBar():
             self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current = dask.compute(
                 self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current,
@@ -131,5 +131,5 @@ class Landweber(Estimator, Operator):
         """
         self.previous = self.initial
         self.current = self.initial
-        Estimator.estimate_q(self)
-        Estimator.estimate_delta(self)
+        Estimator.estimate_q(self, compute=True)
+        Estimator.estimate_delta(self, compute=True)
