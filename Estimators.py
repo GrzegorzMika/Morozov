@@ -40,8 +40,6 @@ class Landweber(Estimator, Operator):
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
 
-    @staticmethod
-
     @property
     def solution(self):
         return self.previous
@@ -50,13 +48,17 @@ class Landweber(Estimator, Operator):
     def solution(self, solution):
         self.previous = solution
 
-    @staticmethod
-    def L2norm(x, y):
-        return da.sum((x - y) ** 2)
+    def L2norm(self, x, y, sqrt=False):
+        grid = da.linspace(self.lower, self.upper, self.grid_size)
+        weights = self.quadrature(grid)
+        if sqrt:
+            norm = da.sqrt(da.sum(((x - y) ** 2) * weights))
+        else:
+            norm = da.sum(((x - y) ** 2) * weights)
+        return norm
 
     @timer
     def __iteration(self):
-        print('iteration')
         bracket = self.q_estimator - np.matmul(self.K, self.previous)
         self.current = self.previous + self.relaxation * np.matmul(self.KH, bracket)
         return self.current
@@ -68,20 +70,21 @@ class Landweber(Estimator, Operator):
     def __update_solution(self):
         self.previous = self.current
 
-
     @timer
     def __force_computations(self):
         self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current = dask.optimize(
             self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current)
         with ProgressBar():
             self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current = dask.compute(
-                self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current, num_workers=cpu_count())
+                self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current,
+                num_workers=cpu_count())
 
-    def estimate(self):
+    def estimate(self, compute=False):
         it = 1
         start = time()
-        print('Force computations...')
-        self.__force_computations()
+        if compute:
+            print('Force computations...')
+            self.__force_computations()
         condition = self.__stopping_rule()
         print(condition)
         while condition:
@@ -89,9 +92,14 @@ class Landweber(Estimator, Operator):
             it += 1
             self.__update_solution()
             self.__iteration()
-            print(self.current)
             condition = self.__stopping_rule()
             if it > self.max_iter:
                 warn('Maximum number of iterations reached!', RuntimeWarning)
                 break
         print('Total elapsed time: {}'.format(time() - start))
+
+    def refresh(self):
+        self.previous = self.initial
+        self.current = self.initial
+        Estimator.estimate_q(self)
+        Estimator.estimate_delta(self)

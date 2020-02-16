@@ -82,10 +82,10 @@ class Estimator(Quadrature):
         :return: Float indicating the estimated noise level if compute is True or dask graph of computations if
         compute is False.
         """
-        grid: da.array= da.linspace(self.lower, self.upper, self.grid_size)
+        grid: da.array = da.linspace(self.lower, self.upper, self.grid_size)
         v_function: List[da.array] = [da.sum(self.quadrature(grid) * self.kernel(grid, y) ** 2) for y in self.__observations]
         v_function: da.array = da.stack(v_function, axis=0)
-        delta: da.array= da.sum(v_function) / self.sample_size ** 2
+        delta: da.array = da.sum(v_function) / (self.sample_size ** 2)
         if compute:
             # noinspection PyUnresolvedReferences
             delta: float = delta.compute()
@@ -94,4 +94,8 @@ class Estimator(Quadrature):
 
     @abstractmethod
     def estimate(self, *args, **kwargs):
+        ...
+
+    @abstractmethod
+    def refresh(self, *args, **kwargs):
         ...
