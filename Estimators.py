@@ -13,7 +13,7 @@ from decorators import timer
 
 class Landweber(Estimator, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
-                 observations: Union[da.array, np.ndarray], sample_size: int , quadrature: str, **kwargs):
+                 observations: Union[da.array, np.ndarray], sample_size: int, quadrature: str = 'rectangle', **kwargs):
         Operator.__init__(self, kernel, lower, upper, grid_size, quadrature)
         Estimator.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
         self.kernel: Callable = kernel
