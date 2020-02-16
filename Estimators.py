@@ -68,11 +68,20 @@ class Landweber(Estimator, Operator):
 
     @timer
     def __iteration(self) -> Union[np.ndarray, da.array]:
+        """
+        One iteration of Landweber algorithm.
+        :return: Union[np.ndarray, da.array] with the next solution from algorithm.
+        """
         bracket: Union[da.array, np.ndarray] = self.q_estimator - np.matmul(self.K, self.previous)
         self.current = self.previous + self.relaxation * np.matmul(self.KH, bracket)
         return self.current
 
     def __stopping_rule(self) -> bool:
+        """
+        Implementation of Morozov discrepancy stopping rule. If the distance between solution and observations is smaller
+        than estimated noise level, then the algorithm will stop.
+        :return: boolean representing whether the stop condition is reached (False) or not (True).
+        """
         norm: float = self.L2norm(np.matmul(self.KHK, self.current), self.q_estimator).compute()
         return norm > self.delta
 
@@ -81,6 +90,9 @@ class Landweber(Estimator, Operator):
 
     @timer
     def __force_computations(self):
+        """
+        Force computations of all dask computation graphs.
+        """
         self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current = dask.optimize(
             self.K, self.KH, self.KHK, self.delta, self.q_estimator, self.previous, self.current)
         with ProgressBar():
@@ -89,6 +101,12 @@ class Landweber(Estimator, Operator):
                 num_workers=cpu_count())
 
     def estimate(self, compute: bool = False):
+        """
+        Implementation of Landweber algorithm for inverse problem with stopping rule based on Morozov discrepancy principle.
+        The algorithm is prevented to take longer than max_iter iterations.
+        :param compute: Provide computations in form of numpy arrays (True) or dask graphs (False).
+        :type compute: boolean (default: False)
+        """
         it: int = 1
         start: float = time()
         if compute:
