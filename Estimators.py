@@ -1,14 +1,11 @@
 from typing import Callable
 from warnings import warn
-
 import dask.array as da
 import dask
 import numpy as np
 from time import time
-
 from dask.diagnostics import ProgressBar
 from dask.system import cpu_count
-
 from GeneralEstimator import Estimator
 from Operator import Operator
 from decorators import timer
