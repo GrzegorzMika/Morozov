@@ -55,7 +55,7 @@ class Quadrature:
 
 
 class Operator(Quadrature):
-    def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
+    def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int, adjoint: bool,
                  quadrature: str = 'rectangle'):
         """
         Build an approximation of integral operator with given kernel on equal grid.
@@ -67,6 +67,8 @@ class Operator(Quadrature):
         :type upper: float
         :param grid_size: Size of the grid on which the operator is approximated.
         :type grid_size: int
+        :param adjoint: Is the operator self_adjoint (True) or not (False)?
+        :type adjoint: boolean
         :param quadrature: Type of quadrature used to approximate the operator.
         :type quadrature: str
         """
@@ -77,6 +79,7 @@ class Operator(Quadrature):
                                                      int), "Upper limit must be a number, but was {} provided".format(
             upper)
         assert isinstance(grid_size, int), 'Grid size must be an integer, but was {} provided'.format(grid_size)
+        assert isinstance(adjoint, bool), 'Condition if operator is self-adjoint must be boolean, but was {} provided'.format(adjoint)
         assert quadrature in ['rectangle', 'dummy'], 'This type of quadrature is not supported, currently only {} ' \
                                                      'are supported'.format(
             [method for method in dir(Quadrature) if not method.startswith('_')])
@@ -91,6 +94,7 @@ class Operator(Quadrature):
         self.lower: float = float(lower)
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
+        self.adjoint: bool = adjoint
         self.quadrature: Callable = getattr(super(), quadrature)
         self.__K: np.ndarray = np.zeros((grid_size, grid_size)).astype(np.float64)
         self.__KH: np.ndarray = np.zeros((grid_size, grid_size)).astype(np.float64)
@@ -135,5 +139,9 @@ class Operator(Quadrature):
         print('Calculating operator approximation...')
         column_list: List[np.ndarray] = [self.operator_column(t) for t in self.__grid]
         np.stack(column_list, axis=1, out=self.__K)
+        print('Calculating adjoint operator approximation...')
+        if self.adjoint:
+            self.__KH = self.__K
+        # TODO: implement correct approximation of adjoint operator
         self.__KH = self.__K.transpose().conj()
         return self.__K
