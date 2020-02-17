@@ -1,5 +1,4 @@
-from typing import Callable, Union, List, Optional
-
+from typing import Callable, Union, List
 import numpy as np
 from numba import jit
 from decorators import vectorize, timer
@@ -86,8 +85,9 @@ class Operator(Quadrature):
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
         self.quadrature: Callable = getattr(super(), quadrature)
-        self.__K: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(float)
-        self.__KH: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(float)
+        self.__K: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(np.float64)
+        self.__KH: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(np.float64)
+        self.__grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size)
 
     # noinspection PyPep8Naming
     @property
@@ -109,20 +109,15 @@ class Operator(Quadrature):
     def KH(self, KH):
         self.__KH = KH
 
-    @property
-    def __grid_list(self) -> List[float]:
-        return list(np.linspace(self.lower, self.upper, self.grid_size))
-
-    def operator_column(self, t: float) -> np.ndarray:
+    def operator_column(self, t: np.ndarray) -> np.ndarray:
         """
         Function constructing nth column of an approximation. Its value is equal to the values of the operator with
-        grid as first argument, value of nth grid point weighted by quadrature weight in nth grid point.
-        :param t: nth grid point, second argument to kernel function and argument to quadrature weight builder.
-        :type t: float
-        :return: Numpy array containing the nth column of the approximation.
+        grid as first argument, value of grid points weighted by quadrature weight in nth grid point.
+        :param t: grid, second argument to kernel function and argument to quadrature weight builder.
+        :type t: Numpy ndarray
+        :return: Numpy ndarray containing the nth column of the approximation.
         """
-        grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size)
-        return self.kernel(grid, t) * self.quadrature(t)
+        return self.kernel(self.__grid, t) * self.quadrature(t)
 
     @timer
     def approximate(self) -> np.ndarray:
@@ -131,7 +126,7 @@ class Operator(Quadrature):
         :return: Numpy array containing the approximation of the operator on given grid.
         """
         print('Calculating operator approximation...')
-        column_list: List[np.ndarray] = [self.operator_column(t) for t in self.__grid_list]
-        operator: np.ndarray = np.stack(column_list, axis=1, out=self.__K)
+        column_list: List[np.ndarray] = [self.operator_column(t) for t in self.__grid]
+        np.stack(column_list, axis=1, out=self.__K)
         self.__KH = self.__K.transpose().conj()
-        return operator
+        return self.__K

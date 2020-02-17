@@ -5,6 +5,7 @@ import numpy as np
 from GeneralEstimator import Estimator
 from Operator import Operator
 from decorators import timer
+import scipy.linalg.blas as blas
 
 
 class Landweber(Estimator, Operator):
@@ -16,7 +17,7 @@ class Landweber(Estimator, Operator):
         self.lower: float = float(lower)
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
-        self.__observations: np.ndarray = observations
+        self.__observations: np.ndarray = observations.astype(np.float64)
         self.sample_size: int = sample_size
         self.relaxation: float = kwargs.get('relaxation')
         if self.relaxation is None:
@@ -26,22 +27,23 @@ class Landweber(Estimator, Operator):
             self.max_iter = 100
         self.initial: np.ndarray = kwargs.get('initial_guess')
         if self.initial is None:
-            self.initial = np.repeat(np.array([0]), self.grid_size)
-        self.previous: np.ndarray = self.initial
-        self.current: np.ndarray = self.initial
+            self.initial = np.repeat(np.array([0]), self.grid_size).astype(np.float64)
+        self.previous: np.ndarray = self.initial.astype(np.float64)
+        self.current: np.ndarray = self.initial.astype(np.float64)
         Operator.approximate(self)
         self.__KHK: np.ndarray = self.__premultiplication()
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
 
+    # noinspection PyPep8Naming
     @timer
     def __premultiplication(self) -> np.ndarray:
         """
         Perform a pre-multiplication of adjoint matrix and matrix
         @return: Numpy array with multiplication of adjoint operator and operator
         """
-        KHK: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(float)
-        return np.matmul(self.KH, self.K, out=KHK)
+        KHK: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(np.float64)
+        return np.dot(self.KH, self.K, out=KHK)
 
     # noinspection PyPep8Naming
     @property
