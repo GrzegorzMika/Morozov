@@ -5,6 +5,7 @@ import numpy as np
 from GeneralEstimator import Estimator
 from Operator import Operator
 from decorators import timer
+from numba import jit
 
 
 class Landweber(Estimator, Operator):
@@ -64,9 +65,14 @@ class Landweber(Estimator, Operator):
     def solution(self, solution: np.ndarray):
         self.previous = solution
 
-    def L2norm(self, x: np.ndarray, y: np.ndarray, sqrt: bool = False) -> np.float64:
+    @staticmethod
+    @jit(nopython=True)
+    def __L2norm(x: np.ndarray, y: np.ndarray, weights: np.ndarray) -> np.float64:
+        return np.sum(np.multiply(np.square(np.subtract(x, y)), weights))
+
+    def L2norm(self, x: np.ndarray, y: np.ndarray) -> np.float64:
         """
-        Calculate the approximation of L2 norm of difference of two approximation of function.
+        Calculate the approximation of L2 norm of difference of two approximation of function (not the square root).
         :param x: Approximation of function on given grid.
         :type x: np.ndarray
         :param y: Approximation of function on given grid.
@@ -76,11 +82,7 @@ class Landweber(Estimator, Operator):
         :return: Float representing the L2 norm of difference between given functions.
 
         """
-        if sqrt:
-            norm: np.float64 = np.sqrt(np.sum(np.multiply(np.square(np.subtract(x, y)), self.__weights)))
-        else:
-            norm: np.float64 = np.sum(np.multiply(np.square(np.subtract(x, y)), self.__weights))
-        return norm
+        return self.__L2norm(x, y, self.__weights)
 
     @timer
     def __iteration(self) -> np.ndarray:
@@ -98,8 +100,7 @@ class Landweber(Estimator, Operator):
         than estimated noise level, then the algorithm will stop.
         :return: boolean representing whether the stop condition is reached (False) or not (True).
         """
-        norm: float = self.L2norm(np.matmul(self.KHK, self.current), self.q_estimator)
-        return norm > self.delta
+        return self.L2norm(np.matmul(self.KHK, self.current), self.q_estimator) > self.delta
 
     def __update_solution(self):
         self.previous = self.current
