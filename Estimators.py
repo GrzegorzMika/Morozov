@@ -6,6 +6,7 @@ from GeneralEstimator import Estimator
 from Operator import Operator
 from decorators import timer
 from numba import jit
+from scipy.linalg.blas import sgemm
 
 
 class Landweber(Estimator, Operator):
@@ -44,8 +45,8 @@ class Landweber(Estimator, Operator):
         Perform a pre-multiplication of adjoint matrix and matrix
         @return: Numpy array with multiplication of adjoint operator and operator
         """
-        KHK: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(np.float64)
-        return np.matmul(self.KH, self.K, out=KHK)
+        # KHK: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(np.float64)
+        return sgemm(1.0, self.KH, self.K)
 
     # noinspection PyPep8Naming
     @property
