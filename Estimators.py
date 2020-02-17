@@ -30,16 +30,28 @@ class Landweber(Estimator, Operator):
         self.previous: np.ndarray = self.initial
         self.current: np.ndarray = self.initial
         Operator.approximate(self)
-        self.KHK: np.ndarray = self.__premultiplication()
+        self.__KHK: np.ndarray = self.__premultiplication()
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
 
-
     @timer
     def __premultiplication(self) -> np.ndarray:
-        KHK: np.ndarray = np.zeros((self.grid_size, self.grid_size))
+        """
+        Perform a pre-multiplication of adjoint matrix and matrix
+        @return: Numpy array with multiplication of adjoint operator and operator
+        """
+        KHK: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(float)
         return np.matmul(self.KH, self.K, out=KHK)
 
+    # noinspection PyPep8Naming
+    @property
+    def KHK(self) -> np.ndarray:
+        return self.__KHK
+
+    # noinspection PyPep8Naming
+    @KHK.setter
+    def KHK(self, KHK: np.ndarray):
+        self.__KHK = KHK
 
     @property
     def solution(self) -> np.ndarray:

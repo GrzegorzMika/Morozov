@@ -1,6 +1,7 @@
 from typing import Callable, Union, List, Optional
-import dask.array as da
+
 import numpy as np
+from numba import jit
 from decorators import vectorize, timer
 
 
@@ -22,7 +23,11 @@ class Quadrature:
         assert self.grid_size > 0, 'Grid has to have at least one point'
         assert isinstance(grid_size, int), 'Specify grid size as integer'
 
-    @vectorize(signature="(),()->()")
+    @staticmethod
+    @jit(nopython=True)
+    def __rectangle_weight(a, b, c):
+        return (b - a) / c
+
     def rectangle(self, t: float) -> float:
         """
         Calculate weight for rectangular quadrature with equal grid.
@@ -30,9 +35,7 @@ class Quadrature:
         :type t: float
         :return: Value of quadrature weight for point t.
         """
-        assert self.upper >= t >= self.lower, 'Argument must belong to interval [{}, {}], but {} was given.'.format(
-            self.lower, self.upper, t)
-        return (self.upper - self.lower) / self.grid_size
+        return self.__rectangle_weight(self.lower, self.upper, self.grid_size)
 
     @vectorize(signature="(),()->()")
     def dummy(self, t: float) -> float:
@@ -83,21 +86,25 @@ class Operator(Quadrature):
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
         self.quadrature: Callable = getattr(super(), quadrature)
-        self.__K: Optional[Union[np.ndarray, da.array]] = None
-        self.__KH: Optional[Union[np.ndarray, da.array]] = None
+        self.__K: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(float)
+        self.__KH: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(float)
 
+    # noinspection PyPep8Naming
     @property
     def K(self):
         return self.__K
 
+    # noinspection PyPep8Naming
     @property
     def KH(self):
         return self.__KH
 
+    # noinspection PyPep8Naming
     @K.setter
     def K(self, K):
         self.__K = K
 
+    # noinspection PyPep8Naming
     @KH.setter
     def KH(self, KH):
         self.__KH = KH
@@ -125,7 +132,6 @@ class Operator(Quadrature):
         """
         print('Calculating operator approximation...')
         column_list: List[np.ndarray] = [self.operator_column(t) for t in self.__grid_list]
-        operator: np.ndarray = np.stack(column_list, axis=1)
-        self.K = operator
-        self.KH = operator.transpose().conj()
+        operator: np.ndarray = np.stack(column_list, axis=1, out=self.__K)
+        self.__KH = self.__K.transpose().conj()
         return operator

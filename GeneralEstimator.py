@@ -28,10 +28,12 @@ class Estimator(Quadrature):
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
         self.quadrature: Callable = getattr(super(), quadrature)
-        self.__observations: np.ndarray = observations
+        self.__observations: np.ndarray = observations.astype(float)
         self.sample_size: int = sample_size
         self.__delta: Optional[float] = None
-        self.__q_estimator: Optional[np.ndarray] = None
+        self.__q_estimator: np.ndarray = np.zeros((self.grid_size, )).astype(float)
+        self.__grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size).astype(float)
+        self.__weights: np.ndarray = self.quadrature(self.__grid)
 
     @property
     def delta(self) -> float:
@@ -71,35 +73,19 @@ class Estimator(Quadrature):
         self.__q_estimator = estimator
         return estimator
 
-    # @timer
+    @timer
     def estimate_delta(self) -> float:
         """
         Estimate noise level based on the observations and approximation of function v.
         :return: Float indicating the estimated noise level.
         """
-        # print('Estimating noise level...')
-        grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size)
-        v_function_list: List[np.ndarray] = [np.sum(np.multiply(self.quadrature(grid),
-                                                                np.square(self.kernel(grid, y)))) for y in
-                                             self.__observations]
+        print('Estimating noise level...')
+        v_function_list: List[np.ndarray] = [np.sum(np.multiply(self.__weights,
+                                             np.square(self.kernel(self.__grid, y)))) for y in self.__observations]
         v_function: np.ndarray = np.stack(v_function_list, axis=0)
-        delta: float = np.sum(v_function) / (self.sample_size ** 2)
+        delta: float = np.divide(np.sum(v_function), np.square(self.sample_size))
         self.__delta = delta
-        # print('Estimated noise level: {}'.format(delta))
-        return delta
-
-    # test
-    def __estimate_delta_entry(self, arg: np.ndarray) -> np.ndarray:
-        return np.sum(np.multiply(self.quadrature(arg[1:]), np.square(self.kernel(arg[1:], arg[0]))))
-
-    def estimate_delta_test(self) -> np.float64:
-        grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size)
-        grid = np.tile(grid, self.__observations.shape[0]).reshape(self.__observations.shape[0], self.grid_size)
-        obs: np.ndarray = self.__observations.reshape((self.__observations.shape[0], 1))
-        input_array: np.ndarray = np.hstack((obs, grid))
-        delta_col: np.ndarray = np.apply_along_axis(self.__estimate_delta_entry_np, 1, input_array)
-        delta: np.float64 = np.sum(delta_col)
-        self.__delta = delta
+        print('Estimated noise level: {}'.format(delta))
         return delta
 
     @abstractmethod
