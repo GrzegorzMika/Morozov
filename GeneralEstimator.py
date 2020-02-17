@@ -7,7 +7,7 @@ from decorators import timer
 
 class Estimator(Quadrature):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
-                 observations: np.ndarray, sample_size: int, quadrature: str):
+                 observations: np.ndarray, sample_size: int, quadrature: str = 'rectangle'):
         Quadrature.__init__(self, lower, upper, grid_size)
         try:
             kernel(np.array([1, 2]), np.array([1, 2]))
