@@ -5,7 +5,6 @@ import numpy as np
 from GeneralEstimator import Estimator
 from Operator import Operator
 from decorators import timer
-import scipy.linalg.blas as blas
 
 
 class Landweber(Estimator, Operator):
@@ -34,6 +33,8 @@ class Landweber(Estimator, Operator):
         self.__KHK: np.ndarray = self.__premultiplication()
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
+        self.__grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size)
+        self.__weights: np.ndarray = self.quadrature(self.__grid)
 
     # noinspection PyPep8Naming
     @timer
@@ -63,7 +64,7 @@ class Landweber(Estimator, Operator):
     def solution(self, solution: np.ndarray):
         self.previous = solution
 
-    def L2norm(self, x: np.ndarray, y: np.ndarray, sqrt: bool = False) -> Union[float, np.ndarray]:
+    def L2norm(self, x: np.ndarray, y: np.ndarray, sqrt: bool = False) -> np.float64:
         """
         Calculate the approximation of L2 norm of difference of two approximation of function.
         :param x: Approximation of function on given grid.
@@ -75,22 +76,20 @@ class Landweber(Estimator, Operator):
         :return: Float representing the L2 norm of difference between given functions.
 
         """
-        grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size)
-        weights: np.ndarray = self.quadrature(grid)
         if sqrt:
-            norm: np.ndarray = np.sqrt(np.sum(((x - y) ** 2) * weights))
+            norm: np.float64 = np.sqrt(np.sum(np.multiply(np.square(np.subtract(x, y)), self.__weights)))
         else:
-            norm: np.ndarray = np.sum(((x - y) ** 2) * weights)
+            norm: np.float64 = np.sum(np.multiply(np.square(np.subtract(x, y)), self.__weights))
         return norm
 
     @timer
     def __iteration(self) -> np.ndarray:
         """
         One iteration of Landweber algorithm.
-        :return: np.ndarray with the next solution from algorithm.
+        :return: Numpy ndarray with the next approximation of solution from algorithm.
         """
-        bracket: np.ndarray = self.q_estimator - np.matmul(self.K, self.previous)
-        self.current = self.previous + self.relaxation * np.matmul(self.KH, bracket)
+        np.add(self.previous, np.multiply(self.relaxation, np.matmul(self.KH,
+                                np.subtract(self.q_estimator, np.matmul(self.K, self.previous)))), out=self.current)
         return self.current
 
     def __stopping_rule(self) -> bool:
