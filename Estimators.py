@@ -45,7 +45,7 @@ class Landweber(Estimator, Operator):
         @return: Numpy array with multiplication of adjoint operator and operator
         """
         KHK: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(np.float64)
-        return np.dot(self.KH, self.K, out=KHK)
+        return np.matmul(self.KH, self.K, out=KHK)
 
     # noinspection PyPep8Naming
     @property
