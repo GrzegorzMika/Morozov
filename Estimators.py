@@ -37,6 +37,9 @@ class Landweber(Estimator, Operator):
         Estimator.estimate_delta(self)
         self.__grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size)
         self.__weights: np.ndarray = self.quadrature(self.__grid)
+        if 1/np.square(np.linalg.norm(self.K)) > self.relaxation:
+            warn("Relaxation parameter is probably too big, inverse of "
+                 "estimated operator norm is equal to {}".format(1/np.square(np.linalg.norm(self.K))), RuntimeWarning)
 
     # noinspection PyPep8Naming
     @timer
@@ -68,10 +71,10 @@ class Landweber(Estimator, Operator):
 
     @staticmethod
     @jit(nopython=True)
-    def __L2norm(x: np.ndarray, y: np.ndarray, weights: np.ndarray) -> np.float64:
+    def __L2norm(x: np.ndarray, y: np.ndarray, weights: np.ndarray) -> np.ndarray:
         return np.sum(np.multiply(np.square(np.subtract(x, y)), weights))
 
-    def L2norm(self, x: np.ndarray, y: np.ndarray) -> np.float64:
+    def L2norm(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
         """
         Calculate the approximation of L2 norm of difference of two approximation of function (not the square root).
         :param x: Approximation of function on given grid.

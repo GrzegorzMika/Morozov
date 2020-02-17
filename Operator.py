@@ -29,12 +29,19 @@ class Quadrature:
 
     def rectangle(self, t: float) -> float:
         """
-        Calculate weight for rectangular quadrature with equal grid.
+        Calculate weight for rectangular quadrature based on the right end with equal grid.
         :param t: Point in which the weight is calculated.
         :type t: float
         :return: Value of quadrature weight for point t.
         """
         return self.__rectangle_weight(self.lower, self.upper, self.grid_size)
+
+    def rectangle_grid(self) -> np.ndarray:
+        """
+        Return the grid on which the values of integrated function are evaluated.
+        :return: Numpy array containing the points on which the function is evaluated.
+        """
+        return np.delete(np.linspace(self.lower, self.upper, self.grid_size + 1), -1)
 
     @vectorize(signature="(),()->()")
     def dummy(self, t: float) -> float:
@@ -85,9 +92,9 @@ class Operator(Quadrature):
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
         self.quadrature: Callable = getattr(super(), quadrature)
-        self.__K: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(np.float64)
-        self.__KH: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(np.float64)
-        self.__grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size)
+        self.__K: np.ndarray = np.zeros((grid_size, grid_size)).astype(np.float64)
+        self.__KH: np.ndarray = np.zeros((grid_size, grid_size)).astype(np.float64)
+        self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
 
     # noinspection PyPep8Naming
     @property
