@@ -36,10 +36,6 @@ class Landweber(Estimator, Operator):
         self.current: np.ndarray = np.copy(self.initial.astype(np.float64))
         Operator.approximate(self)
         self.__KHK: np.ndarray = self.__premultiplication(self.KH, self.K)
-        if adjoint:
-            self.__KKH = self.__KHK
-        else:
-            self.__KKH: np.ndarray = self.__premultiplication(self.K, self.KH)
         self.relaxation: float = kwargs.get('relaxation')
         if self.relaxation is None:
             self.relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / 2
@@ -73,15 +69,6 @@ class Landweber(Estimator, Operator):
     @KHK.setter
     def KHK(self, KHK: np.ndarray):
         self.__KHK = KHK
-
-    @property
-    def KKH(self) -> np.ndarray:
-        return self.__KKH
-
-    # noinspection PyPep8Naming
-    @KKH.setter
-    def KKH(self, KKH: np.ndarray):
-        self.__KKH = KKH
 
     @property
     def solution(self) -> np.ndarray:
