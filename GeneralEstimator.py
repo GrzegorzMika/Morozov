@@ -32,7 +32,7 @@ class Estimator(Quadrature):
         self.sample_size: int = sample_size
         self.__delta: Optional[float] = None
         self.__q_estimator: np.ndarray = np.zeros((self.grid_size, )).astype(float)
-        self.__grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size).astype(float)
+        self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
         self.__weights: np.ndarray = self.quadrature(self.__grid)
 
     @property
@@ -66,9 +66,8 @@ class Estimator(Quadrature):
         :return: Return numpy array containing estimated function q.
         """
         print('Estimating q function...')
-        grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size)
-        estimator_list: List[np.ndarray] = [np.sum(self.kernel(x, self.__observations)) / self.sample_size for x in
-                                            grid]
+        estimator_list: List[np.ndarray] = \
+            [np.divide(np.sum(self.kernel(x, self.__observations)), self.sample_size) for x in self.__grid]
         estimator: np.ndarray = np.stack(estimator_list, axis=0)
         self.__q_estimator = estimator
         return estimator
@@ -80,10 +79,10 @@ class Estimator(Quadrature):
         :return: Float indicating the estimated noise level.
         """
         print('Estimating noise level...')
-        v_function_list: List[np.ndarray] = [np.sum(np.multiply(self.__weights,
-                                             np.square(self.kernel(self.__grid, y)))) for y in self.__observations]
+        v_function_list: List[np.ndarray] = \
+            [np.sum(np.multiply(self.__weights, np.square(self.kernel(self.__grid, y)))) for y in self.__observations]
         v_function: np.ndarray = np.stack(v_function_list, axis=0)
-        delta: float = np.divide(np.sum(v_function), np.square(self.sample_size))
+        delta: float = np.sqrt(np.divide(np.sum(v_function), np.square(self.sample_size)))
         self.__delta = delta
         print('Estimated noise level: {}'.format(delta))
         return delta
