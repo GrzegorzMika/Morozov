@@ -36,7 +36,11 @@ class Landweber(Estimator, Operator):
         self.previous: np.ndarray = self.initial.astype(np.float64)
         self.current: np.ndarray = self.initial.astype(np.float64)
         Operator.approximate(self)
-        self.__KHK: np.ndarray = self.__premultiplication()
+        self.__KHK: np.ndarray = self.__premultiplication(self.KH, self.K)
+        if adjoint:
+            self.__KKH = self.__KHK
+        else:
+            self.__KKH: np.ndarray = self.__premultiplication(self.K, self.KH)
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
         self.__grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size)
@@ -46,14 +50,16 @@ class Landweber(Estimator, Operator):
                  "estimated operator norm is equal to {}".format(1/np.square(np.linalg.norm(self.K))), RuntimeWarning)
 
     # noinspection PyPep8Naming
+
+    @staticmethod
     @timer
-    def __premultiplication(self) -> np.ndarray:
+    def __premultiplication(A, B) -> np.ndarray:
         """
         Perform a pre-multiplication of adjoint matrix and matrix
         @return: Numpy array with multiplication of adjoint operator and operator
         """
         # KHK: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(np.float64)
-        return sgemm(1.0, self.KH, self.K)
+        return sgemm(1.0, A, B)
 
     # noinspection PyPep8Naming
     @property
@@ -64,6 +70,14 @@ class Landweber(Estimator, Operator):
     @KHK.setter
     def KHK(self, KHK: np.ndarray):
         self.__KHK = KHK
+
+    @property
+    def KKH(self) -> np.ndarray:
+        return self.__KKH
+    # noinspection PyPep8Naming
+    @KKH.setter
+    def KKH(self, KKH: np.ndarray):
+        self.__KKH = KKH
 
     @property
     def solution(self) -> np.ndarray:
@@ -97,8 +111,8 @@ class Landweber(Estimator, Operator):
         One iteration of Landweber algorithm.
         :return: Numpy ndarray with the next approximation of solution from algorithm.
         """
-        np.add(self.previous, np.multiply(self.relaxation, np.matmul(self.KH,
-                                np.subtract(self.q_estimator, np.matmul(self.K, self.previous)))), out=self.current)
+        np.add(self.previous, np.multiply(self.relaxation, np.matmul(self.KKH,
+                                np.subtract(self.q_estimator, np.matmul(self.KHK, self.previous)))), out=self.current)
         return self.current
 
     def __stopping_rule(self) -> bool:
