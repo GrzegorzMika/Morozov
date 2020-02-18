@@ -8,6 +8,9 @@ class Quadrature:
     def __init__(self, lower: Union[int, float], upper: Union[int, float], grid_size: int):
         """
         Functionality to calculate weights in different quadrature schema.
+        Availiable quadratures: `
+            - rectangle: rectangular quadrature with equl grid and function evaluated on thr left end of the interval
+            - dummy: not a quadrature, just approximation of kernel function on a equal grid as in rectangle
         :param lower: Lower end of interval.
         :type lower: float
         :param upper: Upper end of interval.
@@ -29,27 +32,42 @@ class Quadrature:
 
     def rectangle(self, t: float) -> float:
         """
-        Calculate weight for rectangular quadrature with equal grid.
+        Calculate weight for rectangular quadrature based on the left end with equal grid.
         :param t: Point in which the weight is calculated.
         :type t: float
         :return: Value of quadrature weight for point t.
         """
         return self.__rectangle_weight(self.lower, self.upper, self.grid_size)
 
+    def rectangle_grid(self) -> np.ndarray:
+        """
+        Return the grid on which the values of integrated function are evaluated.
+        :return: Numpy array containing the points on which the function is evaluated.
+        """
+        return np.linspace(self.lower, self.upper, self.grid_size, endpoint=False)
+
     @vectorize(signature="(),()->()")
     def dummy(self, t: float) -> float:
         """
-        Calculate weight for dummy quadrature. Weight is always equal to 1 (allows to get approximation of kernel, not operator).
+        Calculate weight for dummy quadrature. Weight is always equal to 1 (allows to get approximation of kernel, not
+        operator).
         :param t: Point in which the weight is calculated.
         :type t: float
         :return: Value of quadrature weight for point t.
         """
         return 1.
 
+    def dummy_grid(self) -> np.ndarray:
+        """
+        Equaly spaced grid for function evaluation.
+        :return: Numpy array containing the points on which the function is evaluated.
+        """
+        return np.linspace(self.lower, self.upper, self.grid_size, endpoint=False)
+
 
 class Operator(Quadrature):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
-                 quadrature: str = 'rectangle'):
+                 adjoint: bool = False, quadrature: str = 'rectangle'):
         """
         Build an approximation of integral operator with given kernel on equal grid.
         :param kernel: Kernel of an operator being approximated.
@@ -60,6 +78,8 @@ class Operator(Quadrature):
         :type upper: float
         :param grid_size: Size of the grid on which the operator is approximated.
         :type grid_size: int
+        :param adjoint: Is the operator self_adjoint (True) or not (False)?
+        :type adjoint: boolean
         :param quadrature: Type of quadrature used to approximate the operator.
         :type quadrature: str
         """
@@ -70,6 +90,7 @@ class Operator(Quadrature):
                                                      int), "Upper limit must be a number, but was {} provided".format(
             upper)
         assert isinstance(grid_size, int), 'Grid size must be an integer, but was {} provided'.format(grid_size)
+        assert isinstance(adjoint, bool), 'Condition if operator is self-adjoint must be boolean, but was {} provided'.format(adjoint)
         assert quadrature in ['rectangle', 'dummy'], 'This type of quadrature is not supported, currently only {} ' \
                                                      'are supported'.format(
             [method for method in dir(Quadrature) if not method.startswith('_')])
@@ -84,10 +105,11 @@ class Operator(Quadrature):
         self.lower: float = float(lower)
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
+        self.adjoint: bool = adjoint
         self.quadrature: Callable = getattr(super(), quadrature)
-        self.__K: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(np.float64)
-        self.__KH: np.ndarray = np.zeros((self.grid_size, self.grid_size)).astype(np.float64)
-        self.__grid: np.ndarray = np.linspace(self.lower, self.upper, self.grid_size)
+        self.__K: np.ndarray = np.zeros((grid_size, grid_size)).astype(np.float64)
+        self.__KH: np.ndarray = np.zeros((grid_size, grid_size)).astype(np.float64)
+        self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
 
     # noinspection PyPep8Naming
     @property
@@ -109,24 +131,36 @@ class Operator(Quadrature):
     def KH(self, KH):
         self.__KH = KH
 
-    def operator_column(self, t: np.ndarray) -> np.ndarray:
+    def __operator_column(self, t: np.ndarray) -> np.ndarray:
         """
-        Function constructing nth column of an approximation. Its value is equal to the values of the operator with
-        grid as first argument, value of grid points weighted by quadrature weight in nth grid point.
-        :param t: grid, second argument to kernel function and argument to quadrature weight builder.
+        Function constructing nth column of the operator approximation.
+        :param t: grid, first argument to kernel function and argument to quadrature weight builder.
         :type t: Numpy ndarray
-        :return: Numpy ndarray containing the nth column of the approximation.
+        :return: Numpy ndarray containing the nth column of the operator approximation.
+        """
+        return self.kernel(t, self.__grid) * self.quadrature(t)
+
+    def __adjoint_operator_column(self, t: np.ndarray) -> np.ndarray:
+        """
+        Function constructing nth column of the adjoint operator approximation.
+        :param t: grid, first argument to kernel function and argument to quadrature weight builder.
+        :type t: Numpy ndarray
+        :return: Numpy ndarray containing the nth column of the adjoint operator approximation.
         """
         return self.kernel(self.__grid, t) * self.quadrature(t)
 
     @timer
-    def approximate(self) -> np.ndarray:
+    def approximate(self):
         """
         Build entire approximation of an operator as matrix of size grid size x grid size.
         :return: Numpy array containing the approximation of the operator on given grid.
         """
         print('Calculating operator approximation...')
-        column_list: List[np.ndarray] = [self.operator_column(t) for t in self.__grid]
+        column_list: List[np.ndarray] = [self.__operator_column(t) for t in self.__grid]
         np.stack(column_list, axis=1, out=self.__K)
-        self.__KH = self.__K.transpose().conj()
-        return self.__K
+        print('Calculating adjoint operator approximation...')
+        if self.adjoint:
+            self.__KH = self.__K
+        else:
+            column_list: List[np.ndarray] = [self.__adjoint_operator_column(t) for t in self.__grid]
+            np.stack(column_list, axis=1, out=self.__KH)
