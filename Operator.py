@@ -147,7 +147,7 @@ class Operator(Quadrature):
         :type t: Numpy ndarray
         :return: Numpy ndarray containing the nth column of the adjoint operator approximation.
         """
-        return self.kernel(self.__grid, t).conj() * self.quadrature(t)
+        return self.kernel(self.__grid, t) * self.quadrature(t)
 
     @timer
     def approximate(self):
