@@ -85,13 +85,11 @@ class Landweber(Estimator, Operator):
 
     def L2norm(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
         """
-        Calculate the approximation of L2 norm of difference of two approximation of function (not the square root).
+        Calculate the approximation of L2 norm of difference of two approximation of function.
         :param x: Approximation of function on given grid.
         :type x: np.ndarray
         :param y: Approximation of function on given grid.
         :type y: np.ndarray
-        :param sqrt: To return the norm after taking the square root (True) or not (False).
-        :type sqrt: boolean (default: False)
         :return: Float representing the L2 norm of difference between given functions.
         """
         return self.__L2norm(x, y, self.__weights)
@@ -115,7 +113,7 @@ class Landweber(Estimator, Operator):
         than estimated noise level, then the algorithm will stop.
         :return: boolean representing whether the stop condition is reached (False) or not (True).
         """
-        return self.L2norm(np.matmul(self.KHK, self.current), self.q_estimator) > self.tau * self.delta
+        return self.L2norm(np.matmul(self.KHK, self.current), self.q_estimator) > (self.tau * self.delta)
 
     def __update_solution(self):
         self.previous = np.copy(self.current)
