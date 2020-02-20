@@ -4,6 +4,9 @@ from typing import Callable, Union, List, Any
 import numpy as np
 
 
+# TODO: implement tests
+# TODO: what with higher precision? (compliance with BLAS spec)
+
 class Generator(metaclass=ABCMeta):
     def __init__(self):
         ...
@@ -50,7 +53,7 @@ class LewisShedler(Generator):
             assert isinstance(lambda_hat, float) | isinstance(lambda_hat, int), "Wrong type of lambda_hat!"
         if seed is not None:
             assert isinstance(seed, float) | isinstance(seed, int), "Wrong type of seed!"
-        if np.sum(self.intensity_function(np.random.uniform(lower, upper, int(1e5))) < 0) > 0:
+        if np.sum(self.intensity_function(np.random.uniform(lower, upper, int(1e6))) < 0) > 0:
             raise ValueError("Intensity function must be greater than or equal to 0!")
         if lower >= upper:
             raise ValueError("Wrong interval is specified! (lower {} >= upper {})".format(lower, upper))

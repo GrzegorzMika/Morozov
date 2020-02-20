@@ -4,6 +4,9 @@ from numba import jit
 from decorators import vectorize, timer
 
 
+# TODO: implement tests
+# TODO: what with higher precision? (compliance with BLAS spec)
+
 class Quadrature:
     def __init__(self, lower: Union[int, float], upper: Union[int, float], grid_size: int):
         """
@@ -90,7 +93,9 @@ class Operator(Quadrature):
                                                      int), "Upper limit must be a number, but was {} provided".format(
             upper)
         assert isinstance(grid_size, int), 'Grid size must be an integer, but was {} provided'.format(grid_size)
-        assert isinstance(adjoint, bool), 'Condition if operator is self-adjoint must be boolean, but was {} provided'.format(adjoint)
+        assert isinstance(adjoint,
+                          bool), 'Condition if operator is self-adjoint must be boolean, but was {} provided'.format(
+            adjoint)
         assert quadrature in ['rectangle', 'dummy'], 'This type of quadrature is not supported, currently only {} ' \
                                                      'are supported'.format(
             [method for method in dir(Quadrature) if not method.startswith('_')])

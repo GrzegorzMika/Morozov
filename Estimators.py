@@ -1,15 +1,16 @@
 from time import time
 from typing import Callable, Union
 from warnings import warn
-import matplotlib.pyplot as plt
 import numpy as np
 from numba import jit
 from scipy.linalg.blas import sgemm
-
 from GeneralEstimator import Estimator
 from Operator import Operator
 from decorators import timer
 
+
+# TODO: implement tests
+# TODO: what with higher precision? (compliance with BLAS spec)
 
 class Landweber(Estimator, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
@@ -25,7 +26,7 @@ class Landweber(Estimator, Operator):
         self.sample_size: int = sample_size
         self.max_iter: int = kwargs.get('max_iter')
         if self.max_iter is None:
-            self.max_iter = 20
+            self.max_iter = 100
         self.tau: float = kwargs.get('tau')
         if self.tau is None:
             self.tau = 1.
@@ -39,6 +40,8 @@ class Landweber(Estimator, Operator):
         self.relaxation: float = kwargs.get('relaxation')
         if self.relaxation is None:
             self.relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / 2
+        else:
+            self.relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / self.relaxation
         if 1 / np.square(np.linalg.norm(self.KHK)) < self.relaxation:
             warn("Relaxation parameter is probably too big, inverse of "
                  "estimated operator norm is equal to {}".format(1 / np.square(np.linalg.norm(self.KHK))),
@@ -77,6 +80,14 @@ class Landweber(Estimator, Operator):
     @solution.setter
     def solution(self, solution: np.ndarray):
         self.previous = solution
+
+    @property
+    def grid(self) -> np.ndarray:
+        return self.__grid
+
+    @grid.setter
+    def grid(self, grid: np.ndarray):
+        self.__grid = grid
 
     @staticmethod
     @jit(nopython=True)

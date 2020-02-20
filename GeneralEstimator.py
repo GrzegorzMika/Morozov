@@ -5,6 +5,9 @@ from Operator import Quadrature
 from decorators import timer
 
 
+# TODO: implement tests
+# TODO: what with higher precision? (compliance with BLAS spec)
+
 class Estimator(Quadrature):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
                  observations: np.ndarray, sample_size: int, quadrature: str = 'rectangle'):
@@ -31,7 +34,7 @@ class Estimator(Quadrature):
         self.__observations: np.ndarray = observations.astype(float)
         self.sample_size: int = sample_size
         self.__delta: Optional[float] = None
-        self.__q_estimator: np.ndarray = np.zeros((self.grid_size, )).astype(float)
+        self.__q_estimator: np.ndarray = np.zeros((self.grid_size,)).astype(float)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
         self.__weights: np.ndarray = self.quadrature(self.__grid)
 
