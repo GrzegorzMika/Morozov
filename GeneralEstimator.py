@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from typing import Callable, Union, Optional, List
 import numpy as np
+from numba import jit
 from Operator import Quadrature
 from decorators import timer
 
@@ -89,6 +90,22 @@ class Estimator(Quadrature):
         self.__delta = delta
         print('Estimated noise level: {}'.format(delta))
         return delta
+
+    @staticmethod
+    @jit(nopython=True)
+    def __L2norm(x: np.ndarray, y: np.ndarray, weights: np.ndarray) -> np.ndarray:
+        return np.sqrt(np.sum(np.multiply(np.square(np.subtract(x, y)), weights)))
+
+    def L2norm(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """
+        Calculate the approximation of L2 norm of difference of two approximation of function.
+        :param x: Approximation of function on given grid.
+        :type x: np.ndarray
+        :param y: Approximation of function on given grid.
+        :type y: np.ndarray
+        :return: Float representing the L2 norm of difference between given functions.
+        """
+        return self.__L2norm(x, y, self.__weights)
 
     @abstractmethod
     def estimate(self, *args, **kwargs):
