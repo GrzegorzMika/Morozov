@@ -10,6 +10,8 @@ from decorators import timer
 
 # TODO: implement tests
 # TODO: what with higher precision? (compliance with BLAS spec)
+# TODO: be careful with data types
+# TODO: use Google Cloud to store results?
 
 class Landweber(Estimator, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
@@ -166,6 +168,7 @@ class Tikhonov(Operator, Estimator):
         Operator.approximate(self)
         self.__KHK: np.ndarray = self.__premultiplication(self.KH, self.K)
         self.__KHKKHK: np.ndarray = self.__premultiplication(self.KHK, self.KHK)
+        self.identity = np.identity(self.grid_size, dtype=np.float64)
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
         self.smoothed_q_estimator = np.repeat(np.array([0]), self.grid_size).astype(np.float64)
@@ -237,3 +240,6 @@ class Tikhonov(Operator, Estimator):
 
     def __update_solution(self):
         self.previous = np.copy(self.current)
+
+    def __iteration(self, gamma: np.float64) -> np.ndarray:
+        self.current = np.linalg.solve(self.KHKKHK + gamma * self.identity, self.smoothed_q_estimator + gamma * self.previous)
