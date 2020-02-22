@@ -34,8 +34,8 @@ class Landweber(Estimator, Operator):
         self.initial: np.ndarray = kwargs.get('initial_guess')
         if self.initial is None:
             self.initial = np.repeat(np.array([0]), self.grid_size).astype(np.float64)
-        self.previous: np.ndarray = np.copy(self.initial.astype(np.float64))
-        self.current: np.ndarray = np.copy(self.initial.astype(np.float64))
+        self.previous: np.ndarray = np.copy(self.initial).astype(np.float64)
+        self.current: np.ndarray = np.copy(self.initial).astype(np.float64)
         Operator.approximate(self)
         self.__KHK: np.ndarray = self.__premultiplication(self.KH, self.K)
         self.relaxation: float = kwargs.get('relaxation')
@@ -43,10 +43,6 @@ class Landweber(Estimator, Operator):
             self.relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / 2
         else:
             self.relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / self.relaxation
-        if 1 / np.square(np.linalg.norm(self.KHK)) < self.relaxation:
-            warn("Relaxation parameter is probably too big, inverse of "
-                 "estimated operator norm is equal to {}".format(1 / np.square(np.linalg.norm(self.KHK))),
-                 RuntimeWarning)
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
@@ -57,7 +53,7 @@ class Landweber(Estimator, Operator):
     @timer
     def __premultiplication(A, B) -> np.ndarray:
         """
-        Perform a pre-multiplication of adjoint matrix and matrix
+        Perform a pre-multiplication of two matrices
         :return: Numpy array with result of multiplication
         """
         return sgemm(1.0, A, B)
@@ -70,7 +66,7 @@ class Landweber(Estimator, Operator):
     # noinspection PyPep8Naming
     @KHK.setter
     def KHK(self, KHK: np.ndarray):
-        self.__KHK = KHK
+        self.__KHK = KHK.astype(np.float64)
 
     @property
     def solution(self) -> np.ndarray:
@@ -86,7 +82,7 @@ class Landweber(Estimator, Operator):
 
     @grid.setter
     def grid(self, grid: np.ndarray):
-        self.__grid = grid
+        self.__grid = grid.astype(np.float64)
 
     @timer
     def __iteration(self) -> np.ndarray:
@@ -98,7 +94,7 @@ class Landweber(Estimator, Operator):
             np.add(self.previous, np.multiply(self.relaxation, np.matmul(self.KHK,
                                                                          np.subtract(self.q_estimator,
                                                                                      np.matmul(self.KHK,
-                                                                                               self.previous))))))
+                                                                                               self.previous)))))).astype(np.float64)
         return self.current
 
     def __stopping_rule(self) -> bool:
@@ -159,12 +155,12 @@ class Tikhonov(Operator, Estimator):
         self.tau: float = kwargs.get('tau')
         if self.tau is None:
             self.tau = 1.
-        self.__parameter_space_size = kwargs.get('parameter_space_size')
+        self.__parameter_space_size: int = kwargs.get('parameter_space_size')
         if self.__parameter_space_size is None:
             self.__parameter_space_size = 100
         self.initial = np.repeat(np.array([0]), self.grid_size).astype(np.float64)
-        self.previous: np.ndarray = np.copy(self.initial.astype(np.float64))
-        self.current: np.ndarray = np.copy(self.initial.astype(np.float64))
+        self.previous: np.ndarray = np.copy(self.initial).astype(np.float64)
+        self.current: np.ndarray = np.copy(self.initial).astype(np.float64)
         Operator.approximate(self)
         self.__KHK: np.ndarray = self.__premultiplication(self.KH, self.K)
         self.__KHKKHK: np.ndarray = self.__premultiplication(self.KHK, self.KHK)
@@ -192,7 +188,7 @@ class Tikhonov(Operator, Estimator):
     # noinspection PyPep8Naming
     @KHK.setter
     def KHK(self, KHK: np.ndarray):
-        self.__KHK = KHK
+        self.__KHK = KHK.astype(np.float64)
 
     # noinspection PyPep8Naming
     @property
@@ -202,7 +198,7 @@ class Tikhonov(Operator, Estimator):
     # noinspection PyPep8Naming
     @KHKKHK.setter
     def KHKKHK(self, KHKKHK: np.ndarray):
-        self.__KHKKHK = KHKKHK
+        self.__KHKKHK = KHKKHK.astype(np.float64)
 
     @property
     def parameter_space_size(self) -> int:
@@ -218,7 +214,7 @@ class Tikhonov(Operator, Estimator):
 
     @solution.setter
     def solution(self, solution: np.ndarray):
-        self.previous = solution
+        self.previous = solution.astype(np.float64)
 
     @property
     def grid(self) -> np.ndarray:
@@ -233,7 +229,7 @@ class Tikhonov(Operator, Estimator):
     @timer
     def __premultiplication(A, B) -> np.ndarray:
         """
-        Perform a pre-multiplication of adjoint matrix and matrix
+        Perform a pre-multiplication of two matrices
         :return: Numpy array with result of multiplication
         """
         return sgemm(1.0, A, B)
@@ -242,4 +238,9 @@ class Tikhonov(Operator, Estimator):
         self.previous = np.copy(self.current)
 
     def __iteration(self, gamma: np.float64) -> np.ndarray:
-        self.current = np.linalg.solve(self.KHKKHK + gamma * self.identity, self.smoothed_q_estimator + gamma * self.previous)
+        try:
+            self.current = np.linalg.solve(self.KHKKHK + gamma * self.identity,
+                                           self.smoothed_q_estimator + gamma * self.previous)
+        except np.linalg.LinAlgError:
+            warn('Gamma parameter is too small!', RuntimeWarning)
+        return self.current
