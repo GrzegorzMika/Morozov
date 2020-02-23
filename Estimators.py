@@ -11,6 +11,7 @@ from decorators import timer
 # TODO: implement tests
 # TODO: what with higher precision? (compliance with BLAS spec)
 # TODO: be careful with data types
+# TODO: examples
 
 class Landweber(Estimator, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
@@ -156,11 +157,10 @@ class Landweber(Estimator, Operator):
         Estimator.estimate_delta(self)
 
 
-class Tikhonov(Operator, Estimator):
+class Tikhonov(Estimator, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
                  observations: np.ndarray, sample_size: int, order: int = 1, adjoint: bool = False,
-                 quadrature: str = 'rectangle',
-                 **kwargs):
+                 quadrature: str = 'rectangle', **kwargs):
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
         Estimator.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
         self.kernel: Callable = kernel
