@@ -11,7 +11,6 @@ from decorators import timer
 # TODO: implement tests
 # TODO: what with higher precision? (compliance with BLAS spec)
 # TODO: be careful with data types
-# TODO: if not convergent return 0
 
 class Landweber(Estimator, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
@@ -276,6 +275,12 @@ class Tikhonov(Operator, Estimator):
         return self.L2norm(np.matmul(self.KHK, self.__temporary_solution), self.q_estimator) > (self.tau * self.delta)
 
     def __iteration(self, gamma: np.float64) -> np.ndarray:
+        """
+        Iteration of the inner loop of the (iterated) Tikhonov method.
+        :param gamma: Regularization parameter of the Tikhonov algorithm.
+        :type gamma: float
+        :return: Numpy array with the solution in given iteration.
+        """
         try:
             self.current = np.linalg.solve(self.KHKKHK + gamma * self.identity,
                                            self.smoothed_q_estimator + gamma * self.previous)
@@ -285,6 +290,11 @@ class Tikhonov(Operator, Estimator):
 
     @timer
     def __estimate_one_step(self, gamma: np.float64):
+        """
+        Estimation routine for one given gamma parameter of (iterated) Tikhonov method.
+        :param gamma: Regularization parameter.
+        :type gamma: float
+        """
         order = 1
         while order <= self.order:
             self.__iteration(gamma)
@@ -294,6 +304,10 @@ class Tikhonov(Operator, Estimator):
         self.previous = np.copy(self.initial)
 
     def estimate(self):
+        """
+        Implementation of iterated Tikhonov algorithm for inverse problem with stopping rule based on Morozov discrepancy principle.
+        If the algorithm did not converge, the initial solution is returned.
+        """
         start: float = time()
         step = 1
         for gamma in self.parameter_grid:
@@ -303,6 +317,9 @@ class Tikhonov(Operator, Estimator):
             if not self.__stopping_rule():
                 break
             self.__solution = np.copy(self.__temporary_solution)
+        if (step == self.parameter_space_size) and (np.array_equal(self.__solution, self.__temporary_solution)):
+            warn('Algorithm did not converge over given parameter space!', RuntimeWarning)
+            self.__solution = np.copy(self.initial)
         print('Total elapsed time: {}'.format(time() - start))
 
     def refresh(self):
