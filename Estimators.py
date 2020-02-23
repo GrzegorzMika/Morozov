@@ -9,14 +9,36 @@ from decorators import timer
 
 
 # TODO: implement tests
-# TODO: what with higher precision? (compliance with BLAS spec)
-# TODO: be careful with data types
-# TODO: examples
 
 class Landweber(Estimator, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
                  observations: np.ndarray, sample_size: int, adjoint: bool = False, quadrature: str = 'rectangle',
                  **kwargs):
+        """
+        Instance of Landweber solver for inverse problem in Poisson noise with integral operator.
+        :param kernel: Kernel of the integral operator.
+        :type kernel: Callable
+        :param lower: Lower end of the interval on which the operator is defined.
+        :type lower: float
+        :param upper: Upper end of the interval on which the operator is defined.
+        :type lower: float
+        :param grid_size: Size pf grid used to approximate the operator.
+        :type grid_size: int
+        :param observations: Observations used for the estimation.
+        :type observations: numpy.ndarray
+        :param sample_size: Theoretical sample size (n).
+        :type sample_size: int
+        :param adjoint: Whether the operator is adjoint (True) or not (False).
+        :type adjoint: boolean (default: False)
+        :param quadrature: Type of quadrature used to approximate integrals.
+        :type quadrature: str (default: recatngle)
+        :param kwargs: Possible arguments:
+            - max_iter: The maximum number of iterations of the algorithm (int, default: 100).
+            - tau: Parameter used to rescale the obtained values of estimated noise level (float, default: 1).
+            - initial: Initial guess for the solution (numpy.ndarray, default: 0).
+            - relaxation: Parameter used in the iteration of the algorithm (step size, omega). This approximate square norm
+             of an operator is divide by the value of relaxation parameter (float, default: 2).
+        """
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
         Estimator.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
         self.kernel: Callable = kernel
@@ -161,6 +183,32 @@ class Tikhonov(Estimator, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
                  observations: np.ndarray, sample_size: int, order: int = 1, adjoint: bool = False,
                  quadrature: str = 'rectangle', **kwargs):
+        """
+        Instance of iterated Tikhonov solver for inverse problem in Poisson noise with integral operator.
+        :param kernel: Kernel of the integral operator.
+        :type kernel: Callable
+        :param lower: Lower end of the interval on which the operator is defined.
+        :type lower: float
+        :param upper: Upper end of the interval on which the operator is defined.
+        :type lower: float
+        :param grid_size: Size pf grid used to approximate the operator.
+        :type grid_size: int
+        :param observations: Observations used for the estimation.
+        :type observations: numpy.ndarray
+        :param sample_size: Theoretical sample size (n).
+        :type sample_size: int
+        :param order: Order of the iterated algorithm. Estimator for each regularization parameter is obtained after
+        order iterations. Ordinary Tikhonov estimator is obtained for order = 1.
+        :type order: int (default: 1)
+        :param adjoint: Whether the operator is adjoint (True) or not (False).
+        :type adjoint: boolean (default: False)
+        :param quadrature: Type of quadrature used to approximate integrals.
+        :type quadrature: str (default: recatngle)
+        :param kwargs: Possible arguments:
+            - tau: Parameter used to rescale the obtained values of estimated noise level (float, default: 1).
+            - parameter_space_size: Number of possible values of regularization parameter calculated as values between
+            10^(-15) and 1 with step dictated by the parameter_space_size (int, default: 100).
+        """
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
         Estimator.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
         self.kernel: Callable = kernel
@@ -170,9 +218,9 @@ class Tikhonov(Estimator, Operator):
         self.__observations: np.ndarray = observations.astype(np.float64)
         self.sample_size: int = sample_size
         self.__order: int = order
-        self.tau: float = kwargs.get('tau')
-        if self.tau is None:
-            self.tau = 1.
+        self.__tau: float = kwargs.get('tau')
+        if self.__tau is None:
+            self.__tau = 1.
         self.__parameter_space_size: int = kwargs.get('parameter_space_size')
         if self.__parameter_space_size is None:
             self.__parameter_space_size = 100
@@ -283,7 +331,7 @@ class Tikhonov(Estimator, Operator):
         """
         try:
             self.current = np.linalg.solve(self.KHKKHK + gamma * self.identity,
-                                           self.smoothed_q_estimator + gamma * self.previous)
+                                           self.smoothed_q_estimator + gamma * self.previous).astype(np.float64)
         except np.linalg.LinAlgError:
             warn('Gamma parameter is too small!', RuntimeWarning)
         return self.current
@@ -311,7 +359,7 @@ class Tikhonov(Estimator, Operator):
         start: float = time()
         step = 1
         for gamma in self.parameter_grid:
-            print('Number of search steps done: {}'.format(step))
+            print('Number of search steps done: {} from {}'.format(step, self.parameter_space_size))
             step += 1
             self.__estimate_one_step(gamma)
             if not self.__stopping_rule():

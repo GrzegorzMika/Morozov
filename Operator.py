@@ -4,9 +4,6 @@ from numba import jit
 from decorators import vectorize, timer
 
 
-# TODO: implement tests
-# TODO: what with higher precision? (compliance with BLAS spec)
-
 class Quadrature:
     def __init__(self, lower: Union[int, float], upper: Union[int, float], grid_size: int):
         """
@@ -169,3 +166,5 @@ class Operator(Quadrature):
         else:
             column_list: List[np.ndarray] = [self.__adjoint_operator_column(t) for t in self.__grid]
             np.stack(column_list, axis=1, out=self.__KH)
+        self.__K = self.__K.astype(np.float64)
+        self.__KH = self.__KH.astype(np.float64)

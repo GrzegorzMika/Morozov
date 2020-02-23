@@ -4,9 +4,6 @@ from typing import Callable, Union, List, Any
 import numpy as np
 
 
-# TODO: implement tests
-# TODO: what with higher precision? (compliance with BLAS spec)
-
 class Generator(metaclass=ABCMeta):
     def __init__(self):
         ...
@@ -87,7 +84,7 @@ class LewisShedler(Generator):
         d: np.ndarray = np.random.uniform(0, 1, len(s))
         t: np.ndarray = self.intensity_function(s) / self.lambda_hat
         t = s[(d <= t) & (t <= self.upper)]
-        return t
+        return t.astype(np.float64)
 
     def generate_slow(self) -> np.ndarray:
         """
