@@ -11,7 +11,7 @@ from decorators import timer
 # TODO: implement tests
 # TODO: what with higher precision? (compliance with BLAS spec)
 # TODO: be careful with data types
-# TODO: use Google Cloud to store results?
+# TODO: if not convergent return 0
 
 class Landweber(Estimator, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
@@ -28,9 +28,9 @@ class Landweber(Estimator, Operator):
         self.max_iter: int = kwargs.get('max_iter')
         if self.max_iter is None:
             self.max_iter = 100
-        self.tau: float = kwargs.get('tau')
+        self.__tau: float = kwargs.get('tau')
         if self.tau is None:
-            self.tau = 1.
+            self.__tau = 1.
         self.initial: np.ndarray = kwargs.get('initial_guess')
         if self.initial is None:
             self.initial = np.repeat(np.array([0]), self.grid_size).astype(np.float64)
@@ -38,11 +38,11 @@ class Landweber(Estimator, Operator):
         self.current: np.ndarray = np.copy(self.initial).astype(np.float64)
         Operator.approximate(self)
         self.__KHK: np.ndarray = self.__premultiplication(self.KH, self.K)
-        self.relaxation: float = kwargs.get('relaxation')
-        if self.relaxation is None:
-            self.relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / 2
+        self.__relaxation: float = kwargs.get('relaxation')
+        if self.__relaxation is None:
+            self.__relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / 2
         else:
-            self.relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / self.relaxation
+            self.__relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / self.__relaxation
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
@@ -57,6 +57,22 @@ class Landweber(Estimator, Operator):
         :return: Numpy array with result of multiplication
         """
         return sgemm(1.0, A, B)
+
+    @property
+    def relaxation(self) -> np.float64:
+        return self.__relaxation
+
+    @relaxation.setter
+    def relaxation(self, relaxation: np.float64):
+        self.__relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / relaxation
+
+    @property
+    def tau(self) -> float:
+        return self.__tau
+
+    @tau.setter
+    def tau(self, tau: float):
+        self.__tau = tau
 
     # noinspection PyPep8Naming
     @property
@@ -80,9 +96,9 @@ class Landweber(Estimator, Operator):
     def grid(self) -> np.ndarray:
         return self.__grid
 
-    @grid.setter
-    def grid(self, grid: np.ndarray):
-        self.__grid = grid.astype(np.float64)
+    # @grid.setter
+    # def grid(self, grid: np.ndarray):
+    #     self.__grid = grid.astype(np.float64)
 
     @timer
     def __iteration(self) -> np.ndarray:
@@ -94,7 +110,8 @@ class Landweber(Estimator, Operator):
             np.add(self.previous, np.multiply(self.relaxation, np.matmul(self.KHK,
                                                                          np.subtract(self.q_estimator,
                                                                                      np.matmul(self.KHK,
-                                                                                               self.previous)))))).astype(np.float64)
+                                                                                               self.previous)))))).astype(
+            np.float64)
         return self.current
 
     def __stopping_rule(self) -> bool:
@@ -111,7 +128,8 @@ class Landweber(Estimator, Operator):
     def estimate(self):
         """
         Implementation of Landweber algorithm for inverse problem with stopping rule based on Morozov discrepancy principle.
-        The algorithm is prevented to take longer than max_iter iterations.
+        The algorithm is prevented to take longer than max_iter iterations. If the algorithm did not converge, the initial
+        solution is returned.
         """
         it: int = 1
         start: float = time()
@@ -124,6 +142,7 @@ class Landweber(Estimator, Operator):
             condition = self.__stopping_rule()
             if it > self.max_iter:
                 warn('Maximum number of iterations reached!', RuntimeWarning)
+                self.previous = self.initial
                 break
         print('Total elapsed time: {}'.format(time() - start))
 
@@ -158,9 +177,12 @@ class Tikhonov(Operator, Estimator):
         self.__parameter_space_size: int = kwargs.get('parameter_space_size')
         if self.__parameter_space_size is None:
             self.__parameter_space_size = 100
+        self.parameter_grid: np.ndarray = np.flip(np.power(10, np.linspace(-15, 0, self.__parameter_space_size)))
         self.initial = np.repeat(np.array([0]), self.grid_size).astype(np.float64)
         self.previous: np.ndarray = np.copy(self.initial).astype(np.float64)
         self.current: np.ndarray = np.copy(self.initial).astype(np.float64)
+        self.__solution: np.ndarray = np.copy(self.initial).astype(np.float64)
+        self.__temporary_solution: np.ndarray = np.copy(self.initial).astype(np.float64)
         Operator.approximate(self)
         self.__KHK: np.ndarray = self.__premultiplication(self.KH, self.K)
         self.__KHKKHK: np.ndarray = self.__premultiplication(self.KHK, self.KHK)
@@ -171,6 +193,14 @@ class Tikhonov(Operator, Estimator):
         self.smoothed_q_estimator = np.matmul(self.KHK, self.q_estimator)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
         self.__weights: np.ndarray = self.quadrature(self.__grid)
+
+    @property
+    def tau(self) -> float:
+        return self.__tau
+
+    @tau.setter
+    def tau(self, tau: float):
+        self.__tau = tau
 
     @property
     def order(self) -> int:
@@ -210,19 +240,19 @@ class Tikhonov(Operator, Estimator):
 
     @property
     def solution(self) -> np.ndarray:
-        return self.previous
+        return self.__solution
 
     @solution.setter
     def solution(self, solution: np.ndarray):
-        self.previous = solution.astype(np.float64)
+        self.__solution = solution.astype(np.float64)
 
     @property
     def grid(self) -> np.ndarray:
         return self.__grid
 
-    @grid.setter
-    def grid(self, grid: np.ndarray):
-        self.__grid = grid
+    # @grid.setter
+    # def grid(self, grid: np.ndarray):
+    #     self.__grid = grid
 
     # noinspection PyPep8Naming
     @staticmethod
@@ -235,7 +265,15 @@ class Tikhonov(Operator, Estimator):
         return sgemm(1.0, A, B)
 
     def __update_solution(self):
-        self.previous = np.copy(self.current)
+        self.__temporary_solution = np.copy(self.current)
+
+    def __stopping_rule(self) -> bool:
+        """
+        Implementation of Morozov discrepancy stopping rule. If the distance between solution and observations is smaller
+        than estimated noise level, then the algorithm will stop.
+        :return: boolean representing whether the stop condition is reached (False) or not (True).
+        """
+        return self.L2norm(np.matmul(self.KHK, self.__temporary_solution), self.q_estimator) > (self.tau * self.delta)
 
     def __iteration(self, gamma: np.float64) -> np.ndarray:
         try:
@@ -244,3 +282,36 @@ class Tikhonov(Operator, Estimator):
         except np.linalg.LinAlgError:
             warn('Gamma parameter is too small!', RuntimeWarning)
         return self.current
+
+    @timer
+    def __estimate_one_step(self, gamma: np.float64):
+        order = 1
+        while order <= self.order:
+            self.__iteration(gamma)
+            self.previous = np.copy(self.current)
+            order += 1
+        self.__update_solution()
+        self.previous = np.copy(self.initial)
+
+    def estimate(self):
+        start: float = time()
+        step = 1
+        for gamma in self.parameter_grid:
+            print('Number of search steps done: {}'.format(step))
+            step += 1
+            self.__estimate_one_step(gamma)
+            if not self.__stopping_rule():
+                break
+            self.__solution = np.copy(self.__temporary_solution)
+        print('Total elapsed time: {}'.format(time() - start))
+
+    def refresh(self):
+        """
+        Allow to re-estimate the q function, noise level and the target using new observations without need to recalculate
+        the approximation of operator. To be used in conjunction with observations.setter.
+        """
+        self.previous = self.initial
+        self.current = self.initial
+        self.parameter_grid: np.ndarray = np.power(10, np.linspace(-15, 0, self.__parameter_space_size))
+        Estimator.estimate_q(self)
+        Estimator.estimate_delta(self)
