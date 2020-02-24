@@ -21,9 +21,11 @@ class Quadrature:
         self.lower: float = lower
         self.upper: float = upper
         self.grid_size: int = grid_size
+        assert isinstance(grid_size, int), 'Specify grid size as integer'
+        assert isinstance(lower, int) | isinstance(lower, float), 'Specify lower limit as number'
+        assert isinstance(upper, int) | isinstance(upper, float), 'Specify upper limit as number'
         assert self.lower <= self.upper, "Wrong specification of interval"
         assert self.grid_size > 0, 'Grid has to have at least one point'
-        assert isinstance(grid_size, int), 'Specify grid size as integer'
 
     @staticmethod
     @jit(nopython=True)
