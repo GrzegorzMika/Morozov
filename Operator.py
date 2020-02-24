@@ -99,6 +99,7 @@ class Operator(Quadrature):
                                                      'are supported'.format(
             [method for method in dir(Quadrature) if not method.startswith('_')])
         assert callable(kernel), 'Kernel function must be callable'
+        assert lower <= upper, 'Wrong interval specified'
         super().__init__(lower, upper, grid_size)
         try:
             kernel(np.array([1, 2]), np.array([1, 2]))

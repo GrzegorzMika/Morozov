@@ -7,6 +7,9 @@ quadrature = Quadrature(lower=0, upper=1, grid_size=10)
 
 
 class TestQuadrature:
+    def test_quadrature(self):
+        assert quadrature is not None
+
     def test_lower(self):
         assert quadrature.lower == 0
 
