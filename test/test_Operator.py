@@ -1,8 +1,7 @@
 import numpy as np
 from numpy.testing import assert_equal
-
-from Operator import Quadrature, Operator
 from pytest import raises
+from Operator import Operator
 
 
 def identity(x, y):
@@ -92,7 +91,6 @@ class OperatorFunctionalities:
         assert_equal(operator_adj.KH, operator_nonadj.KH)
         assert_equal(operator_adj.KH, operator_nonadj.K)
         assert_equal(operator_adj.K, operator_nonadj.K)
-    def test_approximate_
 
 
 class OperatorException:
