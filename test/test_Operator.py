@@ -9,6 +9,13 @@ def identity(x, y):
     return np.where(x < y, 1, 1)
 
 
+def kernel_nonvector(x, y):
+    if x < y:
+        return 1
+    else:
+        return 0
+
+
 operator = Operator(kernel=identity, lower=0, upper=1, grid_size=100)
 
 
@@ -66,9 +73,63 @@ class TestOperatorAttributes:
         assert callable(operator.dummy_grid)
 
 
+def diagonal(x, y):
+    return np.where(x == y, 1, 0)
+
+operator_nonadj = Operator(kernel=diagonal, lower=0, upper=1, grid_size=100)
+operator_adj = Operator(kernel=diagonal, lower=0, upper=1, grid_size=100, adjoint=True)
+
+
 class OperatorFunctionalities:
-    pass
+    def test_approximate_diagonal(self):
+        operator_nonadj.approximate()
+        assert_equal(operator_nonadj.K, np.diag(np.repeat(0.01, 100)))
+        assert_equal(operator_nonadj.KH, np.diag(np.repeat(0.01, 100)))
+        operator_adj.approximate()
+        assert_equal(operator_adj.K, np.diag(np.repeat(0.01, 100)))
+        assert_equal(operator_adj.KH, np.diag(np.repeat(0.01, 100)))
+        assert_equal(operator_adj.K, operator_nonadj.KH)
+        assert_equal(operator_adj.KH, operator_nonadj.KH)
+        assert_equal(operator_adj.KH, operator_nonadj.K)
+        assert_equal(operator_adj.K, operator_nonadj.K)
+    def test_approximate_
 
 
 class OperatorException:
-    pass
+    def test_lower(self):
+        with raises(AssertionError):
+            Operator(kernel=identity, lower='a', upper=1, grid_size=10)
+
+    def test_upper(self):
+        with raises(AssertionError):
+            Operator(kernel=identity, lower=0, upper='a', grid_size=10)
+
+    def test_grid_size(self):
+        with raises(AssertionError):
+            Operator(kernel=identity, lower=0, upper=1, grid_size='a')
+
+    def test_adjoint(self):
+        with raises(AssertionError):
+            Operator(kernel=identity, lower=0, upper=1, grid_size=10, adjoint='a')
+        with raises(AssertionError):
+            Operator(kernel=identity, lower=0, upper=1, grid_size=10, adjoint=1)
+
+    def test_quadrature(self):
+        with raises(AssertionError):
+            Operator(kernel=identity, lower=0, upper=1, grid_size=10, quadrature=1)
+        with raises(AssertionError):
+            Operator(kernel=identity, lower=0, upper=1, grid_size=10, quadrature='lol')
+
+    def test_order(self):
+        with raises(AssertionError):
+            Operator(kernel=identity, lower=1, upper=0, grid_size=10)
+
+    def test_kernel(self):
+        with raises(AssertionError):
+            Operator(kernel=1, lower=0, upper=1, grid_size=10)
+        with raises(AssertionError):
+            Operator(kernel='a', lower=0, upper=1, grid_size=10)
+
+    def test_kernel_vectorization(self):
+        operator = Operator(kernel=kernel_nonvector, lower=0, upper=1, grid_size=10)
+        assert_equal(operator.kernel(np.array([0, 1]), np.array([0, 1])), np.array([0, 0], [0, 0]))
