@@ -1,4 +1,5 @@
 numpy==1.18.1
 scipy==1.4.1
 numba==0.48.0
+cupy==7.1.1
 pytest==5.3.5

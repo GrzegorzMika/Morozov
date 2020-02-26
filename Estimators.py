@@ -2,6 +2,7 @@ from time import time
 from typing import Callable, Union
 from warnings import warn
 import numpy as np
+import cupy as cp
 from scipy.linalg.blas import sgemm
 from GeneralEstimator import Estimator
 from Operator import Operator
@@ -47,28 +48,22 @@ class Landweber(Estimator, Operator):
         self.sample_size: int = sample_size
         self.max_iter: int = kwargs.get('max_iter', 100)
         self.__tau: float = kwargs.get('tau', 1.)
-        self.initial: np.ndarray = kwargs.get('initial_guess',
-                                              np.repeat(np.array([0]), self.grid_size).astype(np.float64))
-        self.previous: np.ndarray = np.copy(self.initial).astype(np.float64)
-        self.current: np.ndarray = np.copy(self.initial).astype(np.float64)
+        self.initial: cp.ndarray = kwargs.get('initial_guess',
+                                              cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64))
+        self.previous: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
+        self.current: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
         Operator.approximate(self)
-        self.__KHK: np.ndarray = self.__premultiplication(self.KH, self.K)
+        self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
         self.__relaxation: float = kwargs.get('relaxation', 2)
-        self.__relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / self.__relaxation
+        self.__relaxation = 1 / cp.square(cp.linalg.norm(self.KHK)) / self.__relaxation
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
-        self.__weights: np.ndarray = self.quadrature(self.__grid)
 
-    # noinspection PyPep8Naming
     @staticmethod
     @timer
-    def __premultiplication(A, B) -> np.ndarray:
-        """
-        Perform a pre-multiplication of two matrices
-        :return: Numpy array with result of multiplication
-        """
-        return sgemm(1.0, A, B)
+    def __premultiplication(A: cp.ndarray, B: cp.ndarray) -> cp.ndarray:
+        return cp.matmul(A, B)
 
     @property
     def relaxation(self) -> np.float64:
@@ -76,7 +71,7 @@ class Landweber(Estimator, Operator):
 
     @relaxation.setter
     def relaxation(self, relaxation: np.float64):
-        self.__relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / relaxation
+        self.__relaxation = 1 / cp.square(cp.linalg.norm(self.KHK)) / relaxation
 
     @property
     def tau(self) -> float:
@@ -88,20 +83,20 @@ class Landweber(Estimator, Operator):
 
     # noinspection PyPep8Naming
     @property
-    def KHK(self) -> np.ndarray:
+    def KHK(self) -> cp.ndarray:
         return self.__KHK
 
     # noinspection PyPep8Naming
     @KHK.setter
-    def KHK(self, KHK: np.ndarray):
-        self.__KHK = KHK.astype(np.float64)
+    def KHK(self, KHK: cp.ndarray):
+        self.__KHK = KHK.astype(cp.float64)
 
     @property
-    def solution(self) -> np.ndarray:
+    def solution(self) -> cp.ndarray:
         return self.previous
 
     @solution.setter
-    def solution(self, solution: np.ndarray):
+    def solution(self, solution: cp.ndarray):
         self.previous = solution
 
     @property
@@ -127,14 +122,14 @@ class Landweber(Estimator, Operator):
     #     return self.current
 
     @timer
-    def __iteration(self) -> np.ndarray:
+    def __iteration(self) -> cp.ndarray:
         """
         One iteration of Landweber algorithm.
         :return: Numpy ndarray with the next approximation of solution from algorithm.
         """
-        self.current = np.add(self.previous, np.multiply(self.relaxation,
-                                                         np.matmul(self.KHK, np.subtract(self.q_estimator,
-                                                                                         np.matmul(self.KHK,
+        self.current = cp.add(self.previous, cp.multiply(self.relaxation,
+                                                         cp.matmul(self.KHK, cp.subtract(self.q_estimator,
+                                                                                         cp.matmul(self.KHK,
                                                                                                    self.previous)))))
         return self.current
 
@@ -144,10 +139,10 @@ class Landweber(Estimator, Operator):
         than estimated noise level, then the algorithm will stop.
         :return: boolean representing whether the stop condition is reached (False) or not (True).
         """
-        return self.L2norm(np.matmul(self.KHK, self.current), self.q_estimator) > (self.tau * self.delta)
+        return self.L2norm(cp.matmul(self.KHK, self.current), self.q_estimator) > (self.tau * self.delta)
 
     def __update_solution(self):
-        self.previous = np.copy(self.current)
+        self.previous = cp.copy(self.current)
 
     def estimate(self):
         """
@@ -223,29 +218,20 @@ class Tikhonov(Estimator, Operator):
         self.__tau: float = kwargs.get('tau', 1.)
         self.__parameter_space_size: int = kwargs.get('parameter_space_size', 100)
         self.parameter_grid: np.ndarray = np.flip(np.power(10, np.linspace(-15, 0, self.__parameter_space_size)))
-        self.initial = np.repeat(np.array([0]), self.grid_size).astype(np.float64)
-        self.previous: np.ndarray = np.copy(self.initial).astype(np.float64)
-        self.current: np.ndarray = np.copy(self.initial).astype(np.float64)
-        self.__solution: np.ndarray = np.copy(self.initial).astype(np.float64)
-        self.__temporary_solution: np.ndarray = np.copy(self.initial).astype(np.float64)
+        self.initial = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
+        self.previous: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
+        self.current: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
+        self.__solution: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
+        self.__temporary_solution: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
         Operator.approximate(self)
-        self.__KHK: np.ndarray = self.__premultiplication(self.KH, self.K)
-        self.__KHKKHK: np.ndarray = self.__premultiplication(self.KHK, self.KHK)
-        self.identity = np.identity(self.grid_size, dtype=np.float64)
+        self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
+        self.__KHKKHK: cp.ndarray = self.__premultiplication(self.KHK, self.KHK)
+        self.identity: cp.ndarray = cp.identity(self.grid_size, dtype=cp.float64)
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
-        self.smoothed_q_estimator = np.repeat(np.array([0]), self.grid_size).astype(np.float64)
-        self.smoothed_q_estimator = np.matmul(self.KHK, self.q_estimator)
+        self.smoothed_q_estimator = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
+        self.smoothed_q_estimator = cp.matmul(self.KHK, self.q_estimator)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
-        self.__weights: np.ndarray = self.quadrature(self.__grid)
-
-    @property
-    def search_steps(self) -> int:
-        return self.__search_steps
-
-    @search_steps.setter
-    def search_steps(self, search_steps: int):
-        self.__search_steps = search_steps
 
     @property
     def tau(self) -> float:
@@ -265,23 +251,23 @@ class Tikhonov(Estimator, Operator):
 
     # noinspection PyPep8Naming
     @property
-    def KHK(self) -> np.ndarray:
+    def KHK(self) -> cp.ndarray:
         return self.__KHK
 
     # noinspection PyPep8Naming
     @KHK.setter
-    def KHK(self, KHK: np.ndarray):
-        self.__KHK = KHK.astype(np.float64)
+    def KHK(self, KHK: cp.ndarray):
+        self.__KHK = KHK.astype(cp.float64)
 
     # noinspection PyPep8Naming
     @property
-    def KHKKHK(self) -> np.ndarray:
+    def KHKKHK(self) -> cp.ndarray:
         return self.__KHKKHK
 
     # noinspection PyPep8Naming
     @KHKKHK.setter
-    def KHKKHK(self, KHKKHK: np.ndarray):
-        self.__KHKKHK = KHKKHK.astype(np.float64)
+    def KHKKHK(self, KHKKHK: cp.ndarray):
+        self.__KHKKHK = KHKKHK.astype(cp.float64)
 
     @property
     def parameter_space_size(self) -> int:
@@ -292,12 +278,12 @@ class Tikhonov(Estimator, Operator):
         self.__parameter_space_size = parameter_space_size
 
     @property
-    def solution(self) -> np.ndarray:
+    def solution(self) -> cp.ndarray:
         return self.__solution
 
     @solution.setter
-    def solution(self, solution: np.ndarray):
-        self.__solution = solution.astype(np.float64)
+    def solution(self, solution: cp.ndarray):
+        self.__solution = solution.astype(cp.float64)
 
     @property
     def grid(self) -> np.ndarray:
@@ -310,12 +296,8 @@ class Tikhonov(Estimator, Operator):
     # noinspection PyPep8Naming
     @staticmethod
     @timer
-    def __premultiplication(A, B) -> np.ndarray:
-        """
-        Perform a pre-multiplication of two matrices
-        :return: Numpy array with result of multiplication
-        """
-        return sgemm(1.0, A, B)
+    def __premultiplication(A: cp.ndarray, B: cp.ndarray) -> cp.ndarray:
+        return cp.matmul(A, B)
 
     def __update_solution(self):
         self.__temporary_solution = np.copy(self.current)
@@ -326,24 +308,20 @@ class Tikhonov(Estimator, Operator):
         than estimated noise level, then the algorithm will stop.
         :return: boolean representing whether the stop condition is reached (False) or not (True).
         """
-        return self.L2norm(np.matmul(self.KHK, self.__temporary_solution), self.q_estimator) > (self.tau * self.delta)
+        return self.L2norm(cp.matmul(self.KHK, self.__temporary_solution), self.q_estimator) > (self.tau * self.delta)
 
-    def __iteration(self, gamma: np.float64) -> np.ndarray:
+    def __iteration(self, gamma: cp.float64):
         """
         Iteration of the inner loop of the (iterated) Tikhonov method.
         :param gamma: Regularization parameter of the Tikhonov algorithm.
         :type gamma: float
         :return: Numpy array with the solution in given iteration.
         """
-        try:
-            self.current = np.linalg.solve(self.KHKKHK + gamma * self.identity,
-                                           self.smoothed_q_estimator + gamma * self.previous)
-        except np.linalg.LinAlgError:
-            warn('Gamma parameter is too small!', RuntimeWarning)
-        return self.current
+        self.current = cp.linalg.solve(self.KHKKHK + gamma * self.identity,
+                                       self.smoothed_q_estimator + gamma * self.previous)
 
     @timer
-    def __estimate_one_step(self, gamma: np.float64):
+    def __estimate_one_step(self, gamma: cp.float64):
         """
         Estimation routine for one given gamma parameter of (iterated) Tikhonov method.
         :param gamma: Regularization parameter.
@@ -352,10 +330,10 @@ class Tikhonov(Estimator, Operator):
         order = 1
         while order <= self.order:
             self.__iteration(gamma)
-            self.previous = np.copy(self.current)
+            self.previous = cp.copy(self.current)
             order += 1
         self.__update_solution()
-        self.previous = np.copy(self.initial)
+        self.previous = cp.copy(self.initial)
 
     def estimate(self):
         """
@@ -367,14 +345,13 @@ class Tikhonov(Estimator, Operator):
         for gamma in self.parameter_grid:
             print('Number of search steps done: {} from {}'.format(step, self.parameter_space_size))
             step += 1
-            self.search_steps = step
             self.__estimate_one_step(gamma)
             if not self.__stopping_rule():
                 break
-            self.__solution = np.copy(self.__temporary_solution)
+            self.__solution = cp.copy(self.__temporary_solution)
         if (step == self.parameter_space_size) and (np.array_equal(self.__solution, self.__temporary_solution)):
             warn('Algorithm did not converge over given parameter space!', RuntimeWarning)
-            self.__solution = np.copy(self.initial)
+            self.__solution = cp.copy(self.initial)
         print('Total elapsed time: {}'.format(time() - start))
 
     def refresh(self):
@@ -382,9 +359,9 @@ class Tikhonov(Estimator, Operator):
         Allow to re-estimate the q function, noise level and the target using new observations without need to recalculate
         the approximation of operator. To be used in conjunction with observations.setter.
         """
-        self.previous = np.copy(self.initial)
-        self.current = np.copy(self.initial)
-        self.solution = np.copy(self.initial)
+        self.previous = cp.copy(self.initial)
+        self.current = cp.copy(self.initial)
+        self.solution = cp.copy(self.initial)
         self.parameter_grid: np.ndarray = np.power(10, np.linspace(-15, 0, self.__parameter_space_size))
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)

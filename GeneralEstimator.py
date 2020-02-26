@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from typing import Callable, Union, Optional, List
 import numpy as np
+import cupy as cp
 from numba import jit
 from Operator import Quadrature
 from decorators import timer
@@ -35,9 +36,10 @@ class Estimator(Quadrature):
         self.__observations: np.ndarray = observations.astype(float)
         self.sample_size: int = sample_size
         self.__delta: Optional[float] = None
-        self.__q_estimator: np.ndarray = np.zeros((self.grid_size,)).astype(float)
+        self.__q_estimator: cp.ndarray = cp.zeros((self.grid_size,)).astype(float)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
-        self.__weights: np.ndarray = self.quadrature(self.__grid)
+        self.__weights_np: np.ndarray = self.quadrature(self.__grid)
+        self.__weights: cp.ndarray = cp.asarray(self.quadrature(self.__grid))
 
     @property
     def delta(self) -> float:
@@ -48,11 +50,11 @@ class Estimator(Quadrature):
         self.__delta = delta
 
     @property
-    def q_estimator(self) -> np.ndarray:
+    def q_estimator(self) -> cp.ndarray:
         return self.__q_estimator
 
     @q_estimator.setter
-    def q_estimator(self, q_estimator: np.ndarray):
+    def q_estimator(self, q_estimator: cp.ndarray):
         self.__q_estimator = q_estimator
 
     @property
@@ -64,7 +66,7 @@ class Estimator(Quadrature):
         self.__observations = observations
 
     @timer
-    def estimate_q(self) -> np.ndarray:
+    def estimate_q(self):
         """
         Estimate function q on given grid based on the observations.
         :return: Return numpy array containing estimated function q.
@@ -73,30 +75,27 @@ class Estimator(Quadrature):
         estimator_list: List[np.ndarray] = \
             [np.divide(np.sum(self.kernel(x, self.__observations)), self.sample_size) for x in self.__grid]
         estimator: np.ndarray = np.stack(estimator_list, axis=0).astype(np.float64)
-        self.__q_estimator = estimator
-        return estimator
+        self.__q_estimator = cp.asarray(estimator)
 
     @timer
-    def estimate_delta(self) -> float:
+    def estimate_delta(self):
         """
         Estimate noise level based on the observations and approximation of function v.
         :return: Float indicating the estimated noise level.
         """
         print('Estimating noise level...')
         v_function_list: List[np.ndarray] = \
-            [np.sum(np.multiply(self.__weights, np.square(self.kernel(self.__grid, y)))) for y in self.__observations]
+            [np.sum(np.multiply(self.__weights_np, np.square(self.kernel(self.__grid, y)))) for y in self.__observations]
         v_function: np.ndarray = np.stack(v_function_list, axis=0)
         delta: float = np.sqrt(np.divide(np.sum(v_function), np.square(self.sample_size)))
         self.__delta = delta
         print('Estimated noise level: {}'.format(delta))
-        return delta
 
     @staticmethod
-    @jit(nopython=True)
-    def __L2norm(x: np.ndarray, y: np.ndarray, weights: np.ndarray) -> np.ndarray:
-        return np.sqrt(np.sum(np.multiply(np.square(np.subtract(x, y)), weights)))
+    def __L2norm(x_gpu: cp.ndarray, y_gpu: cp.ndarray, weights: cp.ndarray) -> cp.ndarray:
+        return cp.sqrt(cp.sum(cp.multiply(cp.square(cp.subtract(x_gpu, y_gpu)), weights)))
 
-    def L2norm(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    def L2norm(self, x: cp.ndarray, y: cp.ndarray) -> cp.ndarray:
         """
         Calculate the approximation of L2 norm of difference of two approximation of function.
         :param x: Approximation of function on given grid.
