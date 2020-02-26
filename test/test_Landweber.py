@@ -1,12 +1,26 @@
+import os
+
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 from pytest import raises
 from Estimators import Landweber
+from Generator import LewisShedler
 
 
 def identity(x, y):
     return np.where(x < y, 1, 1)
 
+
+def lam(t):
+    return 200 * (1 + np.sin(20 * t))
+
+
+def kernel(x, y):
+    return np.where(x < y, (1 + np.sin(20 * y)), (1 + np.sin(20 * y)))
+
+
+generator = LewisShedler(intensity_function=lam, lower=0, upper=1, seed=1)
+observations_random = generator.generate()
 
 observations = np.repeat(0, 30)
 
@@ -131,6 +145,11 @@ class TestFunctionalities:
     def test_estimate(self):
         estimator.estimate()
         assert_almost_equal(estimator.solution, np.repeat([0.4500003868645154], 100), decimal=6)
+        estimator_tmp = Landweber(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations_random,
+                                  sample_size=200, relaxation=10)
+        estimator_tmp.estimate()
+        solution = np.load(os.path.join('test_files', 'solution_landweber.npy'))
+        assert_equal(estimator_tmp.solution, solution)
 
     def test_refresh(self):
         estimator.estimate()
