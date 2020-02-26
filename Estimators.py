@@ -8,8 +8,6 @@ from Operator import Operator
 from decorators import timer
 
 
-# TODO: implement tests
-
 class Landweber(Estimator, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
                  observations: np.ndarray, sample_size: int, adjoint: bool = False, quadrature: str = 'rectangle',
@@ -49,7 +47,8 @@ class Landweber(Estimator, Operator):
         self.sample_size: int = sample_size
         self.max_iter: int = kwargs.get('max_iter', 100)
         self.__tau: float = kwargs.get('tau', 1.)
-        self.initial: np.ndarray = kwargs.get('initial_guess', np.repeat(np.array([0]), self.grid_size).astype(np.float64))
+        self.initial: np.ndarray = kwargs.get('initial_guess',
+                                              np.repeat(np.array([0]), self.grid_size).astype(np.float64))
         self.previous: np.ndarray = np.copy(self.initial).astype(np.float64)
         self.current: np.ndarray = np.copy(self.initial).astype(np.float64)
         Operator.approximate(self)
