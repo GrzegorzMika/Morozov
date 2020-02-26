@@ -4,6 +4,7 @@ import numpy as np
 from numba import jit
 from Operator import Quadrature
 from decorators import timer
+from warnings import warn
 
 
 class Estimator(Quadrature):
@@ -14,7 +15,7 @@ class Estimator(Quadrature):
             kernel(np.array([1, 2]), np.array([1, 2]))
             self.kernel: Callable = kernel
         except ValueError:
-            print('Force vectorization of kernel')
+            warn('Force vectorization of kernel')
             self.kernel: Callable = np.vectorize(kernel)
         assert isinstance(lower, float) | isinstance(lower, int), "Lower limit must be number, but was {} " \
                                                                   "provided".format(lower)
@@ -25,6 +26,8 @@ class Estimator(Quadrature):
                                                      'are supported'.format(
             [method for method in dir(Quadrature) if not method.startswith('_')])
         assert callable(kernel), 'Kernel function must be callable'
+        assert isinstance(observations, np.ndarray), 'Observations must be provided as numpy array, but {} was provided'.format(observations)
+        assert isinstance(sample_size, int), 'Sample size must be an integer'
         self.lower: float = float(lower)
         self.upper: float = float(upper)
         self.grid_size: int = grid_size

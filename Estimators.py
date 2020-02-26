@@ -122,18 +122,29 @@ class Landweber(Estimator, Operator):
     # def grid(self, grid: np.ndarray):
     #     self.__grid = grid.astype(np.float64)
 
+    # @timer
+    # def __iteration(self) -> np.ndarray:
+    #     """
+    #     One iteration of Landweber algorithm.
+    #     :return: Numpy ndarray with the next approximation of solution from algorithm.
+    #     """
+    #     self.current = np.copy(
+    #         np.add(self.previous, np.multiply(self.relaxation, np.matmul(self.KHK,
+    #                                                                      np.subtract(self.q_estimator,
+    #                                                                                  np.matmul(self.KHK,
+    #                                                                                            self.previous)))))).astype(
+    #         np.float64)
+    #     return self.current
+
     @timer
     def __iteration(self) -> np.ndarray:
         """
         One iteration of Landweber algorithm.
         :return: Numpy ndarray with the next approximation of solution from algorithm.
         """
-        self.current = np.copy(
-            np.add(self.previous, np.multiply(self.relaxation, np.matmul(self.KHK,
-                                                                         np.subtract(self.q_estimator,
-                                                                                     np.matmul(self.KHK,
-                                                                                               self.previous)))))).astype(
-            np.float64)
+        self.current = np.add(self.previous, np.multiply(self.relaxation,
+                                          np.matmul(self.KHK, np.subtract(self.q_estimator,
+                                                                          np.matmul(self.KHK, self.previous)))))
         return self.current
 
     def __stopping_rule(self) -> bool:
@@ -240,6 +251,15 @@ class Tikhonov(Estimator, Operator):
         self.smoothed_q_estimator = np.matmul(self.KHK, self.q_estimator)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
         self.__weights: np.ndarray = self.quadrature(self.__grid)
+        self.__search_steps: int = 0
+
+    @property
+    def search_steps(self) -> int:
+        return self.__search_steps
+
+    @search_steps.setter
+    def search_steps(self, search_steps: int):
+        self.__search_steps = search_steps
 
     @property
     def tau(self) -> float:
@@ -331,7 +351,7 @@ class Tikhonov(Estimator, Operator):
         """
         try:
             self.current = np.linalg.solve(self.KHKKHK + gamma * self.identity,
-                                           self.smoothed_q_estimator + gamma * self.previous).astype(np.float64)
+                                           self.smoothed_q_estimator + gamma * self.previous)
         except np.linalg.LinAlgError:
             warn('Gamma parameter is too small!', RuntimeWarning)
         return self.current
@@ -361,6 +381,7 @@ class Tikhonov(Estimator, Operator):
         for gamma in self.parameter_grid:
             print('Number of search steps done: {} from {}'.format(step, self.parameter_space_size))
             step += 1
+            self.search_steps = step
             self.__estimate_one_step(gamma)
             if not self.__stopping_rule():
                 break
@@ -380,3 +401,4 @@ class Tikhonov(Estimator, Operator):
         self.parameter_grid: np.ndarray = np.power(10, np.linspace(-15, 0, self.__parameter_space_size))
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
+        self.search_steps = 0

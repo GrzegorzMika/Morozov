@@ -1,6 +1,7 @@
 import warnings
 from abc import abstractmethod, ABCMeta
 from typing import Callable, Union, List, Any
+from warnings import warn
 import numpy as np
 
 
@@ -42,7 +43,7 @@ class LewisShedler(Generator):
             intensity_function(np.array([1, 2]))
             self.intensity_function = intensity_function
         except ValueError:
-            print('Force vectorization of intensity function')
+            warn('Force vectorization of intensity function')
             self.intensity_function = np.vectorize(intensity_function)
         assert isinstance(upper, float) | isinstance(upper, int), "Wrong type of upper limit!"
         assert isinstance(lower, float) | isinstance(lower, int), "Wrong type of lower limit!"
@@ -57,7 +58,6 @@ class LewisShedler(Generator):
         if lambda_hat is not None and lambda_hat < 0:
             raise ValueError(
                 "Maximum of intensity function must be greater than or equal to 0, found {}".format(lambda_hat))
-
         self.upper = upper
         self.lower = lower
         if lambda_hat is not None:

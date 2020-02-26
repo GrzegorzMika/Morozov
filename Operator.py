@@ -1,4 +1,5 @@
 from typing import Callable, Union, List
+from warnings import warn
 import numpy as np
 from numba import jit
 from decorators import vectorize, timer
@@ -105,7 +106,7 @@ class Operator(Quadrature):
             kernel(np.array([1, 2]), np.array([1, 2]))
             self.kernel: Callable = kernel
         except ValueError:
-            print('Force vectorization of kernel')
+            warn('Force vectorization of kernel')
             self.kernel: Callable = np.vectorize(kernel)
         self.lower: float = float(lower)
         self.upper: float = float(upper)
