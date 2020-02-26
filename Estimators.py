@@ -239,7 +239,6 @@ class Tikhonov(Estimator, Operator):
         self.smoothed_q_estimator = np.matmul(self.KHK, self.q_estimator)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
         self.__weights: np.ndarray = self.quadrature(self.__grid)
-        self.__search_steps: int = 0
 
     @property
     def search_steps(self) -> int:
@@ -384,9 +383,9 @@ class Tikhonov(Estimator, Operator):
         Allow to re-estimate the q function, noise level and the target using new observations without need to recalculate
         the approximation of operator. To be used in conjunction with observations.setter.
         """
-        self.previous = self.initial
-        self.current = self.initial
+        self.previous = np.copy(self.initial)
+        self.current = np.copy(self.initial)
+        self.solution = np.copy(self.initial)
         self.parameter_grid: np.ndarray = np.power(10, np.linspace(-15, 0, self.__parameter_space_size))
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
-        self.search_steps = 0
