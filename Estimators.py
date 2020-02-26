@@ -318,8 +318,10 @@ class Tikhonov(Estimator, Operator):
         :type gamma: float
         :return: Numpy array with the solution in given iteration.
         """
-        self.current = cp.linalg.solve(cp.add(self.KHKKHK, cp.multiply(gamma, self.identity)),
-                                       cp.add(self.smoothed_q_estimator, cp.multiply(gamma, self.previous)))
+        LU, P = linalg.lu_factor(cp.add(self.KHKKHK, cp.multiply(gamma, self.identity)))
+        self.current = linalg.lu_solve((LU, P), cp.add(self.smoothed_q_estimator, cp.multiply(gamma, self.previous)))
+        # self.current = cp.linalg.solve(cp.add(self.KHKKHK, cp.multiply(gamma, self.identity)),
+        #                                cp.add(self.smoothed_q_estimator, cp.multiply(gamma, self.previous)))
 
     @timer
     def __estimate_one_step(self, gamma: cp.float64):
