@@ -47,24 +47,15 @@ class Landweber(Estimator, Operator):
         self.grid_size: int = grid_size
         self.__observations: np.ndarray = observations.astype(np.float64)
         self.sample_size: int = sample_size
-        self.max_iter: int = kwargs.get('max_iter')
-        if self.max_iter is None:
-            self.max_iter = 100
-        self.__tau: float = kwargs.get('tau')
-        if self.tau is None:
-            self.__tau = 1.
-        self.initial: np.ndarray = kwargs.get('initial_guess')
-        if self.initial is None:
-            self.initial = np.repeat(np.array([0]), self.grid_size).astype(np.float64)
+        self.max_iter: int = kwargs.get('max_iter', 100)
+        self.__tau: float = kwargs.get('tau', 1.)
+        self.initial: np.ndarray = kwargs.get('initial_guess', np.repeat(np.array([0]), self.grid_size).astype(np.float64))
         self.previous: np.ndarray = np.copy(self.initial).astype(np.float64)
         self.current: np.ndarray = np.copy(self.initial).astype(np.float64)
         Operator.approximate(self)
         self.__KHK: np.ndarray = self.__premultiplication(self.KH, self.K)
-        self.__relaxation: float = kwargs.get('relaxation')
-        if self.__relaxation is None:
-            self.__relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / 2
-        else:
-            self.__relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / self.__relaxation
+        self.__relaxation: float = kwargs.get('relaxation', 2)
+        self.__relaxation = 1 / np.square(np.linalg.norm(self.KHK)) / self.__relaxation
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
@@ -143,8 +134,9 @@ class Landweber(Estimator, Operator):
         :return: Numpy ndarray with the next approximation of solution from algorithm.
         """
         self.current = np.add(self.previous, np.multiply(self.relaxation,
-                                          np.matmul(self.KHK, np.subtract(self.q_estimator,
-                                                                          np.matmul(self.KHK, self.previous)))))
+                                                         np.matmul(self.KHK, np.subtract(self.q_estimator,
+                                                                                         np.matmul(self.KHK,
+                                                                                                   self.previous)))))
         return self.current
 
     def __stopping_rule(self) -> bool:
@@ -229,12 +221,8 @@ class Tikhonov(Estimator, Operator):
         self.__observations: np.ndarray = observations.astype(np.float64)
         self.sample_size: int = sample_size
         self.__order: int = order
-        self.__tau: float = kwargs.get('tau')
-        if self.__tau is None:
-            self.__tau = 1.
-        self.__parameter_space_size: int = kwargs.get('parameter_space_size')
-        if self.__parameter_space_size is None:
-            self.__parameter_space_size = 100
+        self.__tau: float = kwargs.get('tau', 1.)
+        self.__parameter_space_size: int = kwargs.get('parameter_space_size', 100)
         self.parameter_grid: np.ndarray = np.flip(np.power(10, np.linspace(-15, 0, self.__parameter_space_size)))
         self.initial = np.repeat(np.array([0]), self.grid_size).astype(np.float64)
         self.previous: np.ndarray = np.copy(self.initial).astype(np.float64)
