@@ -1,8 +1,10 @@
 from abc import abstractmethod
 from typing import Callable, Union, Optional, List
 import numpy as np
+from numba import jit
 from Operator import Quadrature
 from decorators import timer
+from warnings import warn
 
 
 class Estimator(Quadrature):
@@ -13,7 +15,7 @@ class Estimator(Quadrature):
             kernel(np.array([1, 2]), np.array([1, 2]))
             self.kernel: Callable = kernel
         except ValueError:
-            print('Force vectorization of kernel')
+            warn('Force vectorization of kernel')
             self.kernel: Callable = np.vectorize(kernel)
         assert isinstance(lower, float) | isinstance(lower, int), "Lower limit must be number, but was {} " \
                                                                   "provided".format(lower)
@@ -24,6 +26,8 @@ class Estimator(Quadrature):
                                                      'are supported'.format(
             [method for method in dir(Quadrature) if not method.startswith('_')])
         assert callable(kernel), 'Kernel function must be callable'
+        assert isinstance(observations, np.ndarray), 'Observations must be provided as numpy array, but {} was provided'.format(observations)
+        assert isinstance(sample_size, int), 'Sample size must be an integer'
         self.lower: float = float(lower)
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
@@ -31,7 +35,7 @@ class Estimator(Quadrature):
         self.__observations: np.ndarray = observations.astype(float)
         self.sample_size: int = sample_size
         self.__delta: Optional[float] = None
-        self.__q_estimator: np.ndarray = np.zeros((self.grid_size, )).astype(float)
+        self.__q_estimator: np.ndarray = np.zeros((self.grid_size,)).astype(float)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
         self.__weights: np.ndarray = self.quadrature(self.__grid)
 
@@ -68,7 +72,7 @@ class Estimator(Quadrature):
         print('Estimating q function...')
         estimator_list: List[np.ndarray] = \
             [np.divide(np.sum(self.kernel(x, self.__observations)), self.sample_size) for x in self.__grid]
-        estimator: np.ndarray = np.stack(estimator_list, axis=0)
+        estimator: np.ndarray = np.stack(estimator_list, axis=0).astype(np.float64)
         self.__q_estimator = estimator
         return estimator
 
@@ -86,6 +90,22 @@ class Estimator(Quadrature):
         self.__delta = delta
         print('Estimated noise level: {}'.format(delta))
         return delta
+
+    @staticmethod
+    @jit(nopython=True)
+    def __L2norm(x: np.ndarray, y: np.ndarray, weights: np.ndarray) -> np.ndarray:
+        return np.sqrt(np.sum(np.multiply(np.square(np.subtract(x, y)), weights)))
+
+    def L2norm(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """
+        Calculate the approximation of L2 norm of difference of two approximation of function.
+        :param x: Approximation of function on given grid.
+        :type x: np.ndarray
+        :param y: Approximation of function on given grid.
+        :type y: np.ndarray
+        :return: Float representing the L2 norm of difference between given functions.
+        """
+        return self.__L2norm(x, y, self.__weights)
 
     @abstractmethod
     def estimate(self, *args, **kwargs):

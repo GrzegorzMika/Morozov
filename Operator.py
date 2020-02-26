@@ -1,4 +1,5 @@
 from typing import Callable, Union, List
+from warnings import warn
 import numpy as np
 from numba import jit
 from decorators import vectorize, timer
@@ -21,9 +22,11 @@ class Quadrature:
         self.lower: float = lower
         self.upper: float = upper
         self.grid_size: int = grid_size
+        assert isinstance(grid_size, int), 'Specify grid size as integer'
+        assert isinstance(lower, int) | isinstance(lower, float), 'Specify lower limit as number'
+        assert isinstance(upper, int) | isinstance(upper, float), 'Specify upper limit as number'
         assert self.lower <= self.upper, "Wrong specification of interval"
         assert self.grid_size > 0, 'Grid has to have at least one point'
-        assert isinstance(grid_size, int), 'Specify grid size as integer'
 
     @staticmethod
     @jit(nopython=True)
@@ -90,17 +93,20 @@ class Operator(Quadrature):
                                                      int), "Upper limit must be a number, but was {} provided".format(
             upper)
         assert isinstance(grid_size, int), 'Grid size must be an integer, but was {} provided'.format(grid_size)
-        assert isinstance(adjoint, bool), 'Condition if operator is self-adjoint must be boolean, but was {} provided'.format(adjoint)
+        assert isinstance(adjoint,
+                          bool), 'Condition if operator is self-adjoint must be boolean, but was {} provided'.format(
+            adjoint)
         assert quadrature in ['rectangle', 'dummy'], 'This type of quadrature is not supported, currently only {} ' \
                                                      'are supported'.format(
             [method for method in dir(Quadrature) if not method.startswith('_')])
         assert callable(kernel), 'Kernel function must be callable'
+        assert lower <= upper, 'Wrong interval specified'
         super().__init__(lower, upper, grid_size)
         try:
             kernel(np.array([1, 2]), np.array([1, 2]))
             self.kernel: Callable = kernel
         except ValueError:
-            print('Force vectorization of kernel')
+            warn('Force vectorization of kernel')
             self.kernel: Callable = np.vectorize(kernel)
         self.lower: float = float(lower)
         self.upper: float = float(upper)
@@ -164,3 +170,5 @@ class Operator(Quadrature):
         else:
             column_list: List[np.ndarray] = [self.__adjoint_operator_column(t) for t in self.__grid]
             np.stack(column_list, axis=1, out=self.__KH)
+        self.__K = self.__K.astype(np.float64)
+        self.__KH = self.__KH.astype(np.float64)

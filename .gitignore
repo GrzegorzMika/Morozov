@@ -3,3 +3,5 @@
 __pycache__
 Playground.ipynb
 nohup.out
+.pytest_cache
+test/.pytest_cache
