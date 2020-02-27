@@ -365,6 +365,6 @@ class Tikhonov(Estimator, Operator):
         self.previous = cp.copy(self.initial)
         self.current = cp.copy(self.initial)
         self.solution = cp.copy(self.initial)
-        self.parameter_grid: np.ndarray = np.power(10, np.linspace(-15, 0, self.__parameter_space_size))
+        self.parameter_grid: np.ndarray = np.flip(np.power(10, np.linspace(-15, 0, self.__parameter_space_size)))
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
