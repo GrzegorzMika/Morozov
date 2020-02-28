@@ -1,4 +1,5 @@
 import numpy as np
+import cupy as cp
 from numpy.testing import assert_equal, assert_almost_equal
 from pytest import raises
 from GeneralEstimator import Estimator
@@ -72,12 +73,12 @@ class TestInheritance:
 
 class TestFunctionalities:
     def test_L2norm(self):
-        assert estimator.L2norm(np.repeat(1, 100), np.repeat(1, 100)) == 0
-        assert_almost_equal(estimator.L2norm(np.repeat(1, 100), np.repeat(0, 100)), 1, decimal=12)
+        assert estimator.L2norm(cp.asarray(np.repeat(1, 100)), cp.asarray(np.repeat(1, 100))) == 0
+        assert_almost_equal(estimator.L2norm(cp.asarray(np.repeat(1, 100)), cp.asarray(np.repeat(0, 100))), 1, decimal=12)
 
     def test_q_estimator(self):
         estimator.estimate_q()
-        assert_almost_equal(estimator.q_estimator, np.repeat(3/5, 100), decimal=12)
+        assert_almost_equal(cp.asnumpy(estimator.q_estimator), np.repeat(3/5, 100), decimal=12)
 
     def test_delta(self):
         estimator.estimate_delta()

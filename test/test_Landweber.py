@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import cupy as cp
 from numpy.testing import assert_equal, assert_almost_equal
 from pytest import raises
 from Estimators import Landweber
@@ -81,17 +82,17 @@ class TestAttributes:
         assert hasattr(estimator, 'previous')
         assert hasattr(estimator, 'current')
         assert hasattr(estimator, 'solution')
-        assert_equal(estimator.initial, np.repeat(np.array([0]), 100).astype(np.float64))
-        assert_equal(estimator.previous, np.repeat(np.array([0]), 100).astype(np.float64))
-        assert_equal(estimator.current, np.repeat(np.array([0]), 100).astype(np.float64))
-        assert_equal(estimator.solution, np.repeat(np.array([0]), 100).astype(np.float64))
+        assert_equal(cp.asnumpy(estimator.initial), np.repeat(np.array([0]), 100).astype(np.float64))
+        assert_equal(cp.asnumpy(estimator.previous), np.repeat(np.array([0]), 100).astype(np.float64))
+        assert_equal(cp.asnumpy(estimator.current), np.repeat(np.array([0]), 100).astype(np.float64))
+        assert_equal(cp.asnumpy(estimator.solution), np.repeat(np.array([0]), 100).astype(np.float64))
         estimator_tmp = Landweber(kernel=identity, lower=0, upper=1, grid_size=100,
                                   observations=observations, sample_size=50,
                                   initial_guess=np.repeat(np.array([3]), 100))
-        assert_equal(estimator_tmp.initial, np.repeat(np.array([3]), 100).astype(np.float64))
-        assert_equal(estimator_tmp.previous, np.repeat(np.array([3]), 100).astype(np.float64))
-        assert_equal(estimator_tmp.current, np.repeat(np.array([3]), 100).astype(np.float64))
-        assert_equal(estimator_tmp.solution, np.repeat(np.array([3]), 100).astype(np.float64))
+        assert_equal(cp.asnumpy(estimator_tmp.initial), np.repeat(np.array([3]), 100).astype(np.float64))
+        assert_equal(cp.asnumpy(estimator_tmp.previous), np.repeat(np.array([3]), 100).astype(np.float64))
+        assert_equal(cp.asnumpy(estimator_tmp.current), np.repeat(np.array([3]), 100).astype(np.float64))
+        assert_equal(cp.asnumpy(estimator_tmp.solution), np.repeat(np.array([3]), 100).astype(np.float64))
 
     def test_delta(self):
         assert hasattr(estimator, 'delta')
@@ -99,13 +100,13 @@ class TestAttributes:
 
     def test_q_estimator(self):
         assert hasattr(estimator, 'q_estimator')
-        assert_almost_equal(estimator.q_estimator, np.repeat(3 / 5, 100), decimal=12)
+        assert_almost_equal(cp.asnumpy(estimator.q_estimator), np.repeat(3 / 5, 100), decimal=12)
 
     def test_operator(self):
         assert hasattr(estimator, 'K')
         assert hasattr(estimator, 'KHK')
-        assert_almost_equal(estimator.K, np.ones((100, 100)) * 0.01)
-        assert_almost_equal(estimator.KHK, np.ones((100, 100)) * 0.01)
+        assert_almost_equal(cp.asnumpy(estimator.K), np.ones((100, 100)) * 0.01)
+        assert_almost_equal(cp.asnumpy(estimator.KHK), np.ones((100, 100)) * 0.01)
 
     def test_grid(self):
         assert hasattr(estimator, 'grid')
@@ -143,21 +144,21 @@ class TestInheritance:
 class TestFunctionalities:
     def test_estimate(self):
         estimator.estimate()
-        assert_almost_equal(estimator.solution, np.repeat([0.4500003868645154], 100), decimal=6)
+        assert_almost_equal(cp.asnumpy(estimator.solution), np.repeat([0.4500003868645154], 100), decimal=6)
         estimator_tmp = Landweber(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations_random,
                                   sample_size=200, relaxation=10)
         estimator_tmp.estimate()
         solution = np.load(os.path.join('test_files', 'solution_landweber.npy'))
-        assert_equal(estimator_tmp.solution, solution)
+        assert_equal(cp.asnumpy(estimator_tmp.solution), solution)
 
     def test_refresh(self):
         estimator.estimate()
         with raises(AssertionError):
-            assert_equal(estimator.solution, np.repeat([0], 100))
+            assert_equal(cp.asnumpy(estimator.solution), np.repeat([0], 100))
         estimator.observations = np.repeat([0], 40)
         estimator.refresh()
-        assert_equal(estimator.solution, np.repeat([0], 100))
-        assert_almost_equal(estimator.q_estimator, np.repeat(4 / 5, 100), decimal=12)
+        assert_equal(cp.asnumpy(estimator.solution), np.repeat([0], 100))
+        assert_almost_equal(cp.asnumpy(estimator.q_estimator), np.repeat(4 / 5, 100), decimal=12)
 
 
 class TestException:
