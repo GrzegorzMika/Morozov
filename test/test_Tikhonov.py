@@ -146,7 +146,7 @@ class TestFunctionalities:
                                  sample_size=200)
         estimator_tmp.estimate()
         solution = np.load(os.path.join('test_files', 'solution_tikhonov.npy'))
-        assert_equal(cp.asnumpy(estimator_tmp.solution), solution)
+        assert_almost_equal(cp.asnumpy(estimator_tmp.solution), solution, decimal=12)
 
     def test_refresh(self):
         estimator.estimate()
