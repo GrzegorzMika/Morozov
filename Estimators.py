@@ -1,13 +1,13 @@
 from time import time
-from typing import Callable, Union
+from typing import Callable, Union, Tuple
 from warnings import warn
-import numpy as np
 import cupy as cp
-from scipy.linalg.blas import sgemm
+import numpy as np
+from cupyx.scipy import linalg
+from cupy import linalg
 from GeneralEstimator import Estimator
 from Operator import Operator
 from decorators import timer
-from cupyx.scipy import linalg
 
 
 class Landweber(Estimator, Operator):
@@ -103,24 +103,6 @@ class Landweber(Estimator, Operator):
     @property
     def grid(self) -> np.ndarray:
         return self.__grid
-
-    # @grid.setter
-    # def grid(self, grid: np.ndarray):
-    #     self.__grid = grid.astype(np.float64)
-
-    # @timer
-    # def __iteration(self) -> np.ndarray:
-    #     """
-    #     One iteration of Landweber algorithm.
-    #     :return: Numpy ndarray with the next approximation of solution from algorithm.
-    #     """
-    #     self.current = np.copy(
-    #         np.add(self.previous, np.multiply(self.relaxation, np.matmul(self.KHK,
-    #                                                                      np.subtract(self.q_estimator,
-    #                                                                                  np.matmul(self.KHK,
-    #                                                                                            self.previous)))))).astype(
-    #         np.float64)
-    #     return self.current
 
     @timer
     def __iteration(self) -> cp.ndarray:
@@ -352,7 +334,7 @@ class Tikhonov(Estimator, Operator):
             if not self.__stopping_rule():
                 break
             self.__solution = cp.copy(self.__temporary_solution)
-        if (step == self.parameter_space_size) and (np.array_equal(self.__solution, self.__temporary_solution)):
+        if (step == self.parameter_space_size + 1) and (np.array_equal(cp.asnumpy(self.__solution), cp.asnumpy(self.__temporary_solution))):
             warn('Algorithm did not converge over given parameter space!', RuntimeWarning)
             self.__solution = cp.copy(self.initial)
         print('Total elapsed time: {}'.format(time() - start))
@@ -366,5 +348,134 @@ class Tikhonov(Estimator, Operator):
         self.current = cp.copy(self.initial)
         self.solution = cp.copy(self.initial)
         self.parameter_grid: np.ndarray = np.flip(np.power(10, np.linspace(-15, 0, self.__parameter_space_size)))
+        Estimator.estimate_q(self)
+        Estimator.estimate_delta(self)
+
+
+class TSVD(Estimator, Operator):
+    def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
+                 observations: np.ndarray, sample_size: int, adjoint: bool = False, quadrature: str = 'rectangle',
+                 **kwargs):
+        """
+        Instance of Landweber solver for inverse problem in Poisson noise with integral operator.
+        :param kernel: Kernel of the integral operator.
+        :type kernel: Callable
+        :param lower: Lower end of the interval on which the operator is defined.
+        :type lower: float
+        :param upper: Upper end of the interval on which the operator is defined.
+        :type lower: float
+        :param grid_size: Size pf grid used to approximate the operator.
+        :type grid_size: int
+        :param observations: Observations used for the estimation.
+        :type observations: numpy.ndarray
+        :param sample_size: Theoretical sample size (n).
+        :type sample_size: int
+        :param adjoint: Whether the operator is adjoint (True) or not (False).
+        :type adjoint: boolean (default: False)
+        :param quadrature: Type of quadrature used to approximate integrals.
+        :type quadrature: str (default: recatngle)
+        :param kwargs: Possible arguments:
+            - tau: Parameter used to rescale the obtained values of estimated noise level (float, default: 1).
+        """
+        Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
+        Estimator.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
+        self.kernel: Callable = kernel
+        self.lower: float = float(lower)
+        self.upper: float = float(upper)
+        self.grid_size: int = grid_size
+        self.__observations: np.ndarray = observations.astype(np.float64)
+        self.sample_size: int = sample_size
+        self.__tau: float = kwargs.get('tau', 1.)
+        self.previous: cp.ndarray = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
+        self.current: cp.ndarray = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
+        Operator.approximate(self)
+        self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
+        Estimator.estimate_q(self)
+        Estimator.estimate_delta(self)
+        self.__U, self.__D, self.__V = self.decomposition(self.KHK)
+        self.smoothed_q_estimator = cp.matmul(self.__U.T, self.q_estimator)
+        self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
+
+    @staticmethod
+    @timer
+    def __premultiplication(A: cp.ndarray, B: cp.ndarray) -> cp.ndarray:
+        return cp.matmul(A, B)
+
+    @staticmethod
+    @timer
+    def decomposition(A: cp.ndarray) -> Tuple[cp.ndarray, cp.ndarray, cp.ndarray]:
+        return linalg.svd(A)
+
+    @property
+    def tau(self) -> float:
+        return self.__tau
+
+    @tau.setter
+    def tau(self, tau: float):
+        self.__tau = tau
+
+    # noinspection PyPep8Naming
+    @property
+    def KHK(self) -> cp.ndarray:
+        return self.__KHK
+
+    # noinspection PyPep8Naming
+    @KHK.setter
+    def KHK(self, KHK: cp.ndarray):
+        self.__KHK = KHK.astype(cp.float64)
+
+    @property
+    def eigenvalues(self) -> cp.ndarray:
+        return self.__D
+
+    @eigenvalues.setter
+    def eigenvalues(self, eigenvalues: cp.ndarray):
+        self.__D = eigenvalues
+
+    @property
+    def solution(self) -> cp.ndarray:
+        return self.previous
+
+    @solution.setter
+    def solution(self, solution: cp.ndarray):
+        self.previous = solution
+
+    @timer
+    def __estimate_one_step(self, threshold: int):
+        diagonal_inv = np.where((self.__D >= self.__D[threshold]) & (self.__D > cp.finfo(cp.float64).eps),
+                                cp.divide(1, self.__D), 0)
+        self.current = cp.matmul(self.__V.T, cp.matmul(cp.diag(diagonal_inv), self.smoothed_q_estimator))
+
+    def __stopping_rule(self) -> bool:
+        """
+        Implementation of Morozov discrepancy stopping rule. If the distance between solution and observations is smaller
+        than estimated noise level, then the algorithm will stop.
+        :return: boolean representing whether the stop condition is reached (False) or not (True).
+        """
+        return self.L2norm(cp.matmul(self.KHK, self.current), self.q_estimator) > (self.tau * self.delta)
+
+    def __update_solution(self):
+        self.previous = cp.copy(self.current)
+
+    def estimate(self):
+        start: float = time()
+        step = 1
+        for threshold, _ in enumerate(self.__D):
+            print('Number of eigenvalues included: {}'.format(threshold))
+            step += 1
+            self.__estimate_one_step(threshold)
+            if not self.__stopping_rule():
+                break
+            if self.current == self.previous:
+                warn('No more eigenvalues can be considered', RuntimeWarning)
+                break
+            self.__update_solution()
+        print('Total elapsed time: {}'.format(time() - start))
+
+    def refresh(self):
+        """
+        Allow to re-estimate the q function, noise level and the target using new observations without need to recalculate
+        the approximation of operator. To be used in conjunction with observations.setter.
+        """
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
