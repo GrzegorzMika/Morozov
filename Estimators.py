@@ -463,14 +463,12 @@ class TSVD(Estimator, Operator):
 
     def estimate(self):
         start: float = time()
-        step = 1
         for threshold, _ in enumerate(self.__D):
-            print('Number of eigenvalues included: {}'.format(threshold))
-            step += 1
+            print('Number of eigenvalues included: {}'.format(threshold + 1))
             self.__estimate_one_step(threshold)
             if not self.__stopping_rule():
                 break
-            if self.current == self.previous:
+            if (self.current == self.previous).all():
                 warn('No more eigenvalues can be considered', RuntimeWarning)
                 break
             self.__update_solution()
