@@ -440,6 +440,10 @@ class TSVD(Estimator, Operator):
     def solution(self, solution: cp.ndarray):
         self.previous = solution
 
+    @property
+    def grid(self) -> np.ndarray:
+        return self.__grid
+
     @timer
     def __estimate_one_step(self, threshold: int):
         diagonal_inv = np.where((self.__D >= self.__D[threshold]) & (self.__D > cp.finfo(cp.float64).eps),
