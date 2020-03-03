@@ -4,7 +4,7 @@ from warnings import warn
 import cupy as cp
 import numpy as np
 from cupyx.scipy import linalg
-from cupy import linalg
+from cupy import linalg as cp_linalg
 from GeneralEstimator import Estimator
 from Operator import Operator
 from decorators import timer
@@ -404,7 +404,7 @@ class TSVD(Estimator, Operator):
     @staticmethod
     @timer
     def decomposition(A: cp.ndarray) -> Tuple[cp.ndarray, cp.ndarray, cp.ndarray]:
-        return linalg.svd(A)
+        return cp_linalg.svd(A)
 
     @property
     def tau(self) -> float:
@@ -434,11 +434,11 @@ class TSVD(Estimator, Operator):
 
     @property
     def solution(self) -> cp.ndarray:
-        return self.previous
+        return self.current
 
     @solution.setter
     def solution(self, solution: cp.ndarray):
-        self.previous = solution
+        self.current = solution
 
     @property
     def grid(self) -> np.ndarray:
@@ -481,3 +481,4 @@ class TSVD(Estimator, Operator):
         """
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
+        self.current = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)

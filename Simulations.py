@@ -83,18 +83,19 @@ def true(s):
 
 generator = LewisShedler(lam, lower=0, upper=1)
 observations = generator.generate()
-landweber = Landweber(kernel=kernel, lower=0, upper=1, grid_size=10000, observations=observations, sample_size=n_size,
-                      adjoint=False, relaxation=10)
-
-error = []
-for i in tqdm(range(50)):
-    landweber.observations = generator.generate()
-    landweber.refresh()
-    landweber.estimate()
-    error.append(landweber.L2norm(landweber.solution, cp.asarray(true(landweber.grid))))
-results = pd.DataFrame({'error': error})
-results.to_csv('simulation1_landweber.csv')
-
+# landweber = Landweber(kernel=kernel, lower=0, upper=1, grid_size=10000, observations=observations, sample_size=n_size,
+#                       adjoint=False, relaxation=10)
+#
+# error = []
+# for i in tqdm(range(50)):
+#     landweber.observations = generator.generate()
+#     landweber.refresh()
+#     landweber.estimate()
+#     error.append(landweber.L2norm(landweber.solution, cp.asarray(true(landweber.grid))))
+# results = pd.DataFrame({'error': error})
+# results.to_csv('simulation1_landweber.csv')
+# del landweber
+# cp._default_memory_pool.free_all_blocks()
 tsvd = TSVD(kernel=kernel, lower=0, upper=1, grid_size=10000, observations=observations, sample_size=n_size,
             adjoint=False)
 
@@ -106,7 +107,8 @@ for i in tqdm(range(50)):
     error.append(tsvd.L2norm(tsvd.current, cp.asarray(true(tsvd.grid))))
 results = pd.DataFrame({'error': error})
 results.to_csv('simulation1_tsvd.csv')
-
+del tsvd
+cp._default_memory_pool.free_all_blocks()
 # print('Simulation 4...')
 # n_size = 200
 #
@@ -155,18 +157,19 @@ def true(s):
 
 generator = LewisShedler(lam, lower=0, upper=1)
 observations = generator.generate()
-landweber = Landweber(kernel=kernel, lower=0, upper=1, grid_size=10000, observations=observations, sample_size=n_size,
-                      adjoint=False, relaxation=10)
-
-error = []
-for i in tqdm(range(50)):
-    landweber.observations = generator.generate()
-    landweber.refresh()
-    landweber.estimate()
-    error.append(landweber.L2norm(landweber.solution, cp.asarray(true(landweber.grid))))
-results = pd.DataFrame({'error': error})
-results.to_csv('simulation2_landweber.csv')
-
+# landweber = Landweber(kernel=kernel, lower=0, upper=1, grid_size=10000, observations=observations, sample_size=n_size,
+#                       adjoint=False, relaxation=10)
+#
+# error = []
+# for i in tqdm(range(50)):
+#     landweber.observations = generator.generate()
+#     landweber.refresh()
+#     landweber.estimate()
+#     error.append(landweber.L2norm(landweber.solution, cp.asarray(true(landweber.grid))))
+# results = pd.DataFrame({'error': error})
+# results.to_csv('simulation2_landweber.csv')
+# del landweber
+# cp._default_memory_pool.free_all_blocks()
 tsvd = TSVD(kernel=kernel, lower=0, upper=1, grid_size=10000, observations=observations, sample_size=n_size,
             adjoint=False)
 
@@ -178,7 +181,8 @@ for i in tqdm(range(50)):
     error.append(tsvd.L2norm(tsvd.current, cp.asarray(true(tsvd.grid))))
 results = pd.DataFrame({'error': error})
 results.to_csv('simulation2_tsvd.csv')
-
+del tsvd
+cp._default_memory_pool.free_all_blocks()
 print('Simulation 6...')
 n_size = 500
 
@@ -197,18 +201,19 @@ def true(s):
 
 generator = LewisShedler(lam, lower=0, upper=1)
 observations = generator.generate()
-landweber = Landweber(kernel=kernel, lower=0, upper=1, grid_size=10000, observations=observations, sample_size=n_size,
-                      adjoint=False, relaxation=10)
-
-error = []
-for i in tqdm(range(50)):
-    landweber.observations = generator.generate()
-    landweber.refresh()
-    landweber.estimate()
-    error.append(landweber.L2norm(landweber.solution, cp.asarray(true(landweber.grid))))
-results = pd.DataFrame({'error': error})
-results.to_csv('simulation3_landweber.csv')
-
+# landweber = Landweber(kernel=kernel, lower=0, upper=1, grid_size=10000, observations=observations, sample_size=n_size,
+#                       adjoint=False, relaxation=10)
+#
+# error = []
+# for i in tqdm(range(50)):
+#     landweber.observations = generator.generate()
+#     landweber.refresh()
+#     landweber.estimate()
+#     error.append(landweber.L2norm(landweber.solution, cp.asarray(true(landweber.grid))))
+# results = pd.DataFrame({'error': error})
+# results.to_csv('simulation3_landweber.csv')
+# del landweber
+# cp._default_memory_pool.free_all_blocks()
 tsvd = TSVD(kernel=kernel, lower=0, upper=1, grid_size=10000, observations=observations, sample_size=n_size,
             adjoint=False)
 
@@ -220,3 +225,5 @@ for i in tqdm(range(50)):
     error.append(tsvd.L2norm(tsvd.current, cp.asarray(true(tsvd.grid))))
 results = pd.DataFrame({'error': error})
 results.to_csv('simulation3_tsvd.csv')
+del tsvd
+cp._default_memory_pool.free_all_blocks()
