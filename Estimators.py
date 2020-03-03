@@ -3,8 +3,8 @@ from typing import Callable, Union, Tuple
 from warnings import warn
 import cupy as cp
 import numpy as np
+from numpy import linalg as np_linalg
 from cupyx.scipy import linalg
-from cupy import linalg as cp_linalg
 from GeneralEstimator import Estimator
 from Operator import Operator
 from decorators import timer
@@ -392,7 +392,10 @@ class TSVD(Estimator, Operator):
         self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
-        self.__U, self.__D, self.__V = self.decomposition(self.KHK)
+        self.__U: cp.ndarray = cp.zeros((self.grid_size, self.grid_size))
+        self.__V: cp.ndarray = cp.zeros((self.grid_size, self.grid_size))
+        self.__D: cp.ndarray = cp.zeros((self.grid_size, ))
+        self.__U, self.__D, self.__V = self.decomposition(self.KHK, self.grid_size)
         self.smoothed_q_estimator = cp.matmul(self.__U.T, self.q_estimator)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
 
@@ -403,8 +406,13 @@ class TSVD(Estimator, Operator):
 
     @staticmethod
     @timer
-    def decomposition(A: cp.ndarray) -> Tuple[cp.ndarray, cp.ndarray, cp.ndarray]:
-        return cp_linalg.svd(A)
+    def decomposition(A: cp.ndarray, size: int) -> Tuple[cp.ndarray, cp.ndarray, cp.ndarray]:
+        A_cpu = cp.asnumpy(A)
+        __U: np.ndarray = np.zeros((size, size))
+        __D: np.ndarray = np.zeros((size, ))
+        __V: np.ndarray = np.zeros((size, size))
+        __U, __D, __V = np_linalg.svd(A_cpu, full_matrices=True, compute_uv=True)
+        return cp.asarray(__U), cp.asarray(__D), cp.asarray(__V)
 
     @property
     def tau(self) -> float:
