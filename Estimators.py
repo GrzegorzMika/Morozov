@@ -407,6 +407,14 @@ class TSVD(Estimator, Operator):
     @staticmethod
     @timer
     def decomposition(A: cp.ndarray, size: int) -> Tuple[cp.ndarray, cp.ndarray, cp.ndarray]:
+        """
+        Run the SVD decomposition. In current implementation, the decomposition is always performed in CPU.
+        :param A: Matrix to be decomposed.
+        :type A: numpy ndarray
+        :param size: One of dimensions of A.
+        :type size: int
+        :return: Tuple [U, D, V] of matrices already moved to GPU memory representing the SVD decomposition as A = UDV.
+        """
         A_cpu = cp.asnumpy(A)
         __U: np.ndarray = np.zeros((size, size))
         __D: np.ndarray = np.zeros((size, ))
@@ -454,8 +462,14 @@ class TSVD(Estimator, Operator):
 
     @timer
     def __estimate_one_step(self, threshold: int):
-        diagonal_inv = np.where((self.__D >= self.__D[threshold]) & (self.__D > cp.finfo(cp.float64).eps),
-                                cp.divide(1, self.__D), 0)
+        """
+        Estimate the solution having a given threshold value and keeping only the singular values above these threshold.
+        Values smaller than numerical zero are always discarded.
+        :param threshold: Value specifying the smallest singular value (sorted in descending order) to keep. All singular
+        values smaller than given are discarded.
+        :type threshold: int
+        """
+        diagonal_inv = np.where((self.__D >= threshold) & (self.__D > cp.finfo(cp.float64).eps), cp.divide(1, self.__D), 0)
         self.current = cp.matmul(self.__V.T, cp.matmul(cp.diag(diagonal_inv), self.smoothed_q_estimator))
 
     def __stopping_rule(self) -> bool:
@@ -470,13 +484,17 @@ class TSVD(Estimator, Operator):
         self.previous = cp.copy(self.current)
 
     def estimate(self):
+        """
+        Implementation of truncated singular value decomposition algorithm for inverse problem with stopping rule
+        based on Morozov discrepancy principle.
+        """
         start: float = time()
-        for threshold, _ in enumerate(self.__D):
-            print('Number of eigenvalues included: {}'.format(threshold + 1))
+        for i, threshold in enumerate(cp.concatenate(((cp.max(self.__D)*1.1).reshape(1,), self.__D))):
+            print('Number of eigenvalues included: {}'.format(i))
             self.__estimate_one_step(threshold)
             if not self.__stopping_rule():
                 break
-            if (self.current == self.previous).all():
+            if (self.current == self.previous).all() and i > 0:
                 warn('No more eigenvalues can be considered', RuntimeWarning)
                 break
             self.__update_solution()
