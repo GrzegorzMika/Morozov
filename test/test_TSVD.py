@@ -60,7 +60,7 @@ class TestAttributes:
         assert hasattr(estimator, 'tau')
         assert estimator.tau == 1.
         estimator_tmp = TSVD(kernel=identity, lower=0, upper=1, grid_size=100,
-                                  observations=observations, sample_size=50, tau=1.7)
+                             observations=observations, sample_size=50, tau=1.7)
         assert estimator_tmp.tau == 1.7
 
     def test_initation(self):
@@ -121,7 +121,7 @@ class TestFunctionalities:
         estimator.estimate()
         assert_almost_equal(cp.asnumpy(estimator.solution), np.repeat([0.59999999686], 100), decimal=6)
         estimator_tmp = TSVD(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations_random,
-                                  sample_size=200, relaxation=10)
+                             sample_size=200, relaxation=10)
         estimator_tmp.estimate()
         solution = np.load(os.path.join('test_files', 'solution_tsvd.npy'))
         assert_almost_equal(cp.asnumpy(estimator_tmp.solution), solution, decimal=12)
@@ -137,4 +137,16 @@ class TestFunctionalities:
 
 
 class TestException:
-    pass
+    def test_observations(self):
+        with raises(AssertionError):
+            TSVD(kernel=identity, lower=0, upper=1, grid_size=1000, observations=[1, 2, 3], sample_size=200)
+
+    def test_sample_size(self):
+        with raises(AssertionError):
+            TSVD(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations, sample_size='a')
+        with raises(AssertionError):
+            TSVD(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations, sample_size=200.)
+
+    def test_tau(self):
+        with raises(AssertionError):
+            TSVD(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations, sample_size=200, tau='a')

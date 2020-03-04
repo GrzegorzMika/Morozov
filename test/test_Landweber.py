@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import cupy as cp
+from _pytest.recwarn import warns
 from numpy.testing import assert_equal, assert_almost_equal
 from pytest import raises
 from Estimators import Landweber
@@ -88,7 +89,7 @@ class TestAttributes:
         assert_equal(cp.asnumpy(estimator.solution), np.repeat(np.array([0]), 100).astype(np.float64))
         estimator_tmp = Landweber(kernel=identity, lower=0, upper=1, grid_size=100,
                                   observations=observations, sample_size=50,
-                                  initial_guess=np.repeat(np.array([3]), 100))
+                                  initial_guess=cp.asarray(np.repeat(np.array([3]), 100)))
         assert_equal(cp.asnumpy(estimator_tmp.initial), np.repeat(np.array([3]), 100).astype(np.float64))
         assert_equal(cp.asnumpy(estimator_tmp.previous), np.repeat(np.array([3]), 100).astype(np.float64))
         assert_equal(cp.asnumpy(estimator_tmp.current), np.repeat(np.array([3]), 100).astype(np.float64))
@@ -162,4 +163,26 @@ class TestFunctionalities:
 
 
 class TestException:
-    pass
+    def test_observations(self):
+        with raises(AssertionError):
+            Landweber(kernel=identity, lower=0, upper=1, grid_size=1000, observations=[1, 2, 3], sample_size=200)
+
+    def test_sample_size(self):
+        with raises(AssertionError):
+            Landweber(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations, sample_size='a')
+        with raises(AssertionError):
+            Landweber(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations, sample_size=200.)
+
+    def test_tau(self):
+        with raises(AssertionError):
+            Landweber(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations, sample_size=200, tau='a')
+
+    def test_initial(self):
+        with warns(RuntimeWarning):
+            estimator_tmp = Landweber(kernel=identity, lower=0, upper=1, grid_size=100, observations=observations,
+                                      sample_size=50, initial_guess=np.repeat(np.array([3]), 100))
+        assert_equal(cp.asnumpy(estimator_tmp.initial), np.repeat(np.array([0]), 100))
+
+    def test_relaxation(self):
+        with raises(AssertionError):
+            Landweber(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations, sample_size=200, relaxation='a')

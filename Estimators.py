@@ -1,3 +1,4 @@
+import os
 from time import time
 from typing import Callable, Union, Tuple
 from warnings import warn
@@ -8,6 +9,8 @@ from cupyx.scipy import linalg
 from GeneralEstimator import Estimator
 from Operator import Operator
 from decorators import timer
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 class Landweber(Estimator, Operator):
@@ -34,10 +37,10 @@ class Landweber(Estimator, Operator):
         :type quadrature: str (default: recatngle)
         :param kwargs: Possible arguments:
             - max_iter: The maximum number of iterations of the algorithm (int, default: 100).
-            - tau: Parameter used to rescale the obtained values of estimated noise level (float, default: 1).
+            - tau: Parameter used to rescale the obtained values of estimated noise level (float or int, default: 1).
             - initial: Initial guess for the solution (numpy.ndarray, default: 0).
             - relaxation: Parameter used in the iteration of the algorithm (step size, omega). This approximate square norm
-             of an operator is divide by the value of relaxation parameter (float, default: 2).
+             of an operator is divide by the value of relaxation parameter (float or int, default: 2).
         """
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
         Estimator.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
@@ -45,17 +48,27 @@ class Landweber(Estimator, Operator):
         self.lower: float = float(lower)
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
+        assert isinstance(observations, np.ndarray)
         self.__observations: np.ndarray = observations.astype(np.float64)
+        assert isinstance(sample_size, int), 'Please specify the sample size as an integer'
         self.sample_size: int = sample_size
         self.max_iter: int = kwargs.get('max_iter', 100)
-        self.__tau: float = kwargs.get('tau', 1.)
+        self.__tau: Union[float, int] = kwargs.get('tau', 1.)
+        assert isinstance(self.__tau, float) | isinstance(self.__tau, int), 'tau must be a number'
         self.initial: cp.ndarray = kwargs.get('initial_guess',
                                               cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64))
+        try:
+            assert isinstance(self.initial, cp.ndarray)
+        except AssertionError:
+            warn('Initial guess is not a cupy array, falling back to default value', RuntimeWarning)
+            self.initial: cp.ndarray = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
         self.previous: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
         self.current: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
         Operator.approximate(self)
         self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
-        self.__relaxation: float = kwargs.get('relaxation', 2)
+        self.__relaxation: Union[float, int] = kwargs.get('relaxation', 2)
+        assert isinstance(self.__relaxation, float) | isinstance(self.__relaxation,
+                                                                 int), 'Relaxation parameter must be a number'
         self.__relaxation = 1 / cp.square(cp.linalg.norm(self.KHK)) / self.__relaxation
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
@@ -185,7 +198,7 @@ class Tikhonov(Estimator, Operator):
         :param quadrature: Type of quadrature used to approximate integrals.
         :type quadrature: str (default: recatngle)
         :param kwargs: Possible arguments:
-            - tau: Parameter used to rescale the obtained values of estimated noise level (float, default: 1).
+            - tau: Parameter used to rescale the obtained values of estimated noise level (float or int, default: 1).
             - parameter_space_size: Number of possible values of regularization parameter calculated as values between
             10^(-15) and 1 with step dictated by the parameter_space_size (int, default: 100).
         """
@@ -195,11 +208,20 @@ class Tikhonov(Estimator, Operator):
         self.lower: float = float(lower)
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
+        assert isinstance(observations, np.ndarray)
         self.__observations: np.ndarray = observations.astype(np.float64)
+        assert isinstance(sample_size, int), 'Please specify the sample size as an integer'
         self.sample_size: int = sample_size
+        assert isinstance(order, int), 'Please specify the order as an integer'
         self.__order: int = order
-        self.__tau: float = kwargs.get('tau', 1.)
+        self.__tau: Union[float, int] = kwargs.get('tau', 1.)
+        assert isinstance(self.__tau, float) | isinstance(self.__tau, int), 'tau must be a number'
         self.__parameter_space_size: int = kwargs.get('parameter_space_size', 100)
+        try:
+            assert isinstance(self.__parameter_space_size, int)
+        except AssertionError:
+            warn('Parameter space size is not an integer, falling back to default value')
+            self.__parameter_space_size = 100
         self.parameter_grid: np.ndarray = np.flip(np.power(10, np.linspace(-15, 0, self.__parameter_space_size)))
         self.initial = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
         self.previous: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
@@ -334,7 +356,8 @@ class Tikhonov(Estimator, Operator):
             if not self.__stopping_rule():
                 break
             self.__solution = cp.copy(self.__temporary_solution)
-        if (step == self.parameter_space_size + 1) and (np.array_equal(cp.asnumpy(self.__solution), cp.asnumpy(self.__temporary_solution))):
+        if (step == self.parameter_space_size + 1) and (
+        np.array_equal(cp.asnumpy(self.__solution), cp.asnumpy(self.__temporary_solution))):
             warn('Algorithm did not converge over given parameter space!', RuntimeWarning)
             self.__solution = cp.copy(self.initial)
         print('Total elapsed time: {}'.format(time() - start))
@@ -375,7 +398,7 @@ class TSVD(Estimator, Operator):
         :param quadrature: Type of quadrature used to approximate integrals.
         :type quadrature: str (default: recatngle)
         :param kwargs: Possible arguments:
-            - tau: Parameter used to rescale the obtained values of estimated noise level (float, default: 1).
+            - tau: Parameter used to rescale the obtained values of estimated noise level (float or int, default: 1).
         """
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
         Estimator.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
@@ -383,9 +406,12 @@ class TSVD(Estimator, Operator):
         self.lower: float = float(lower)
         self.upper: float = float(upper)
         self.grid_size: int = grid_size
+        assert isinstance(observations, np.ndarray)
         self.__observations: np.ndarray = observations.astype(np.float64)
+        assert isinstance(sample_size, int), 'Please specify the sample size as an integer'
         self.sample_size: int = sample_size
-        self.__tau: float = kwargs.get('tau', 1.)
+        self.__tau: Union[float, int] = kwargs.get('tau', 1.)
+        assert isinstance(self.__tau, float) | isinstance(self.__tau, int), 'tau must be a number'
         self.previous: cp.ndarray = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
         self.current: cp.ndarray = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
         Operator.approximate(self)
@@ -394,7 +420,7 @@ class TSVD(Estimator, Operator):
         Estimator.estimate_delta(self)
         self.__U: cp.ndarray = cp.zeros((self.grid_size, self.grid_size))
         self.__V: cp.ndarray = cp.zeros((self.grid_size, self.grid_size))
-        self.__D: cp.ndarray = cp.zeros((self.grid_size, ))
+        self.__D: cp.ndarray = cp.zeros((self.grid_size,))
         self.__U, self.__D, self.__V = self.decomposition(self.KHK, self.grid_size)
         self.smoothed_q_estimator = cp.matmul(self.__U.T, self.q_estimator)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
@@ -417,7 +443,7 @@ class TSVD(Estimator, Operator):
         """
         A_cpu = cp.asnumpy(A)
         __U: np.ndarray = np.zeros((size, size))
-        __D: np.ndarray = np.zeros((size, ))
+        __D: np.ndarray = np.zeros((size,))
         __V: np.ndarray = np.zeros((size, size))
         __U, __D, __V = np_linalg.svd(A_cpu, full_matrices=True, compute_uv=True)
         return cp.asarray(__U), cp.asarray(__D), cp.asarray(__V)
@@ -469,7 +495,8 @@ class TSVD(Estimator, Operator):
         values smaller than given are discarded.
         :type threshold: int
         """
-        diagonal_inv = np.where((self.__D >= threshold) & (self.__D > cp.finfo(cp.float64).eps), cp.divide(1, self.__D), 0)
+        diagonal_inv = np.where((self.__D >= threshold) & (self.__D > cp.finfo(cp.float64).eps), cp.divide(1, self.__D),
+                                0)
         self.current = cp.matmul(self.__V.T, cp.matmul(cp.diag(diagonal_inv), self.smoothed_q_estimator))
 
     def __stopping_rule(self) -> bool:
@@ -489,7 +516,7 @@ class TSVD(Estimator, Operator):
         based on Morozov discrepancy principle.
         """
         start: float = time()
-        for i, threshold in enumerate(cp.concatenate(((cp.max(self.__D)*1.1).reshape(1,), self.__D))):
+        for i, threshold in enumerate(cp.concatenate(((cp.max(self.__D) * 1.1).reshape(1, ), self.__D))):
             print('Number of eigenvalues included: {}'.format(i))
             self.__estimate_one_step(threshold)
             if not self.__stopping_rule():

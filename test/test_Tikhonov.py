@@ -159,4 +159,22 @@ class TestFunctionalities:
 
 
 class TestException:
-    pass
+    def test_observations(self):
+        with raises(AssertionError):
+            Tikhonov(kernel=identity, lower=0, upper=1, grid_size=1000, observations=[1, 2, 3], sample_size=200)
+
+    def test_sample_size(self):
+        with raises(AssertionError):
+            Tikhonov(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations, sample_size='a')
+        with raises(AssertionError):
+            Tikhonov(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations, sample_size=200.)
+
+    def test_tau(self):
+        with raises(AssertionError):
+            Tikhonov(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations, sample_size=200, tau='a')
+
+    def test_order(self):
+        with raises(AssertionError):
+            Tikhonov(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations, sample_size=200, order='a')
+        with raises(AssertionError):
+            Tikhonov(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations, sample_size=200, order=1.)
