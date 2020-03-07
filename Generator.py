@@ -201,8 +201,9 @@ class Wicksell(Generator):
         self.z_sample: Optional[np.ndarray] = None
         self.kwargs: dict = kwargs
         np.random.seed(seed)
-        if not self.inverse_transformation and quad(self.pdf, 0, 1)[0] < 0.999:
-            warn('Supplied pdf function is not a proper pdf function, running normalization', RuntimeWarning)
+        if not self.inverse_transformation and quad(self.pdf, 0, 1)[0] > 1.:
+            warn('Supplied pdf function is not a proper pdf function as it integrates to {}, running'
+                 ' normalization'.format(quad(self.pdf, 0, 1)[0]), RuntimeWarning)
             normalize = quad(self.pdf, 0, 1)[0]
             pdf_tmp: Callable = self.pdf
             del self.pdf
