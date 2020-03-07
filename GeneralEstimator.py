@@ -84,10 +84,10 @@ class Estimator(Quadrature):
         :return: Float indicating the estimated noise level.
         """
         print('Estimating noise level...')
-        v_function_list: List[np.ndarray] = \
+        w_function_list: List[np.ndarray] = \
             [np.sum(np.multiply(self.__weights_np, np.square(self.kernel(self.__grid, y)))) for y in self.__observations]
-        v_function: np.ndarray = np.stack(v_function_list, axis=0)
-        delta: float = np.sqrt(np.divide(np.sum(v_function), np.square(self.sample_size)))
+        w_function: np.ndarray = np.stack(w_function_list, axis=0)
+        delta: float = np.sqrt(np.divide(np.sum(w_function), np.square(self.sample_size)))
         self.__delta = delta
         print('Estimated noise level: {}'.format(delta))
 
