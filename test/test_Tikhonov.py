@@ -82,12 +82,10 @@ class TestAttributes:
         assert hasattr(estimator, 'previous')
         assert hasattr(estimator, 'current')
         assert hasattr(estimator, 'solution')
-        assert hasattr(estimator, '_Tikhonov__temporary_solution')
         assert_equal(cp.asnumpy(estimator.initial), np.repeat(np.array([0]), 100).astype(np.float64))
         assert_equal(cp.asnumpy(estimator.previous), np.repeat(np.array([0]), 100).astype(np.float64))
         assert_equal(cp.asnumpy(estimator.current), np.repeat(np.array([0]), 100).astype(np.float64))
         assert_equal(cp.asnumpy(estimator.solution), np.repeat(np.array([0]), 100).astype(np.float64))
-        assert_equal(cp.asnumpy(estimator._Tikhonov__temporary_solution), np.repeat(np.array([0]), 100).astype(np.float64))
 
     def test_delta(self):
         assert hasattr(estimator, 'delta')
@@ -141,7 +139,7 @@ class TestInheritance:
 class TestFunctionalities:
     def test_estimate(self):
         estimator.estimate()
-        assert_almost_equal(cp.asnumpy(estimator.solution), np.repeat([0.4808820792286063], 100), decimal=6)
+        assert_almost_equal(cp.asnumpy(estimator.solution), np.repeat([0.51074572922], 100), decimal=8)
         estimator_tmp = Tikhonov(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations_random,
                                  sample_size=200)
         estimator_tmp.estimate()

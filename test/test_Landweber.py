@@ -145,7 +145,7 @@ class TestInheritance:
 class TestFunctionalities:
     def test_estimate(self):
         estimator.estimate()
-        assert_almost_equal(cp.asnumpy(estimator.solution), np.repeat([0.4500003868645154], 100), decimal=6)
+        assert_almost_equal(cp.asnumpy(estimator.solution), np.repeat([0.52499999686], 100), decimal=8)
         estimator_tmp = Landweber(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations_random,
                                   sample_size=200, relaxation=10)
         estimator_tmp.estimate()

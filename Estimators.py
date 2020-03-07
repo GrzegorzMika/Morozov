@@ -10,8 +10,6 @@ from GeneralEstimator import Estimator
 from Operator import Operator
 from decorators import timer
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-
 
 class Landweber(Estimator, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
@@ -107,11 +105,11 @@ class Landweber(Estimator, Operator):
 
     @property
     def solution(self) -> cp.ndarray:
-        return self.previous
+        return self.current
 
     @solution.setter
     def solution(self, solution: cp.ndarray):
-        self.previous = solution
+        self.current = solution
 
     @property
     def grid(self) -> np.ndarray:
@@ -201,9 +199,14 @@ class Tikhonov(Estimator, Operator):
             - tau: Parameter used to rescale the obtained values of estimated noise level (float or int, default: 1).
             - parameter_space_size: Number of possible values of regularization parameter calculated as values between
             10^(-15) and 1 with step dictated by the parameter_space_size (int, default: 100).
+             - grid_max_iter: Maximum number of iterations of routine looking for the reasonable starting point for grid
+             search. In each iteration, parameter grid is shifted by 1. In case no reasonable starting point has been found,
+             RuntimeWarning is raised (int, default: 50).
+
         """
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
         Estimator.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
+
         self.kernel: Callable = kernel
         self.lower: float = float(lower)
         self.upper: float = float(upper)
@@ -214,6 +217,8 @@ class Tikhonov(Estimator, Operator):
         self.sample_size: int = sample_size
         assert isinstance(order, int), 'Please specify the order as an integer'
         self.__order: int = order
+        self.grid_max_iter: int = kwargs.get('grid_max_iter', 50)
+        assert isinstance(self.grid_max_iter, int)
         self.__tau: Union[float, int] = kwargs.get('tau', 1.)
         assert isinstance(self.__tau, float) | isinstance(self.__tau, int), 'tau must be a number'
         self.__parameter_space_size: int = kwargs.get('parameter_space_size', 100)
@@ -222,12 +227,11 @@ class Tikhonov(Estimator, Operator):
         except AssertionError:
             warn('Parameter space size is not an integer, falling back to default value')
             self.__parameter_space_size = 100
-        self.parameter_grid: np.ndarray = np.flip(np.power(10, np.linspace(-15, 0, self.__parameter_space_size)))
+        self.__parameter_grid: np.ndarray = np.flip(np.power(10, np.linspace(-15, 0, self.__parameter_space_size)))
         self.initial = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
         self.previous: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
         self.current: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
         self.__solution: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
-        self.__temporary_solution: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
         Operator.approximate(self)
         self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
         self.__KHKKHK: cp.ndarray = self.__premultiplication(self.KHK, self.KHK)
@@ -237,6 +241,7 @@ class Tikhonov(Estimator, Operator):
         self.smoothed_q_estimator = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
         self.smoothed_q_estimator = cp.matmul(self.KHK, self.q_estimator)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
+        self.__define_grid()
 
     @property
     def tau(self) -> float:
@@ -294,9 +299,17 @@ class Tikhonov(Estimator, Operator):
     def grid(self) -> np.ndarray:
         return self.__grid
 
-    # @grid.setter
-    # def grid(self, grid: np.ndarray):
-    #     self.__grid = grid
+    @grid.setter
+    def grid(self, grid: np.ndarray):
+        self.__grid = grid
+
+    @property
+    def hyperparameters(self) -> np.ndarray:
+        return self.__parameter_grid
+
+    @hyperparameters.setter
+    def hyperparameters(self, hyperparameters: np.ndarray):
+        self.__parameter_grid = hyperparameters
 
     # noinspection PyPep8Naming
     @staticmethod
@@ -305,7 +318,7 @@ class Tikhonov(Estimator, Operator):
         return cp.matmul(A, B)
 
     def __update_solution(self):
-        self.__temporary_solution = np.copy(self.current)
+        self.__solution = np.copy(self.current)
 
     def __stopping_rule(self) -> bool:
         """
@@ -313,7 +326,7 @@ class Tikhonov(Estimator, Operator):
         than estimated noise level, then the algorithm will stop.
         :return: boolean representing whether the stop condition is reached (False) or not (True).
         """
-        return self.L2norm(cp.matmul(self.KHK, self.__temporary_solution), self.q_estimator) > (self.tau * self.delta)
+        return self.L2norm(cp.matmul(self.KHK, self.__solution), self.q_estimator) > (self.tau * self.delta)
 
     def __iteration(self, gamma: cp.float64):
         """
@@ -324,8 +337,6 @@ class Tikhonov(Estimator, Operator):
         """
         LU, P = linalg.lu_factor(cp.add(self.KHKKHK, cp.multiply(gamma, self.identity)))
         self.current = linalg.lu_solve((LU, P), cp.add(self.smoothed_q_estimator, cp.multiply(gamma, self.previous)))
-        # self.current = cp.linalg.solve(cp.add(self.KHKKHK, cp.multiply(gamma, self.identity)),
-        #                                cp.add(self.smoothed_q_estimator, cp.multiply(gamma, self.previous)))
 
     @timer
     def __estimate_one_step(self, gamma: cp.float64):
@@ -342,22 +353,36 @@ class Tikhonov(Estimator, Operator):
         self.__update_solution()
         self.previous = cp.copy(self.initial)
 
+    @timer
+    def __define_grid(self):
+        """
+        Routine to define the correct starting point and hyperparameter space. If the solution for biggest gamma
+        immediately fulfills the DP equation, then it is probably wrong staring point and the grid search should start
+        from a bigger value.
+        """
+        for i in range(self.grid_max_iter):
+            self.__estimate_one_step(gamma=np.max(self.hyperparameters))
+            if not self.__stopping_rule():
+                self.hyperparameters = np.flip(np.power(10, np.linspace(-15, 0, self.__parameter_space_size))) + i
+            else:
+                break
+        if (i + 1) == self.grid_max_iter:
+            warn("No reasonable starting point has been found after {} attempts and the algorithm may yield invalid "
+                 "results".format(self.grid_max_iter), RuntimeWarning)
+        self.refresh()
+
     def estimate(self):
         """
         Implementation of iterated Tikhonov algorithm for inverse problem with stopping rule based on Morozov discrepancy principle.
         If the algorithm did not converge, the initial solution is returned.
         """
         start: float = time()
-        step = 1
-        for gamma in self.parameter_grid:
+        for step, gamma in enumerate(self.__parameter_grid):
             print('Number of search steps done: {} from {}'.format(step, self.parameter_space_size))
-            step += 1
             self.__estimate_one_step(gamma)
             if not self.__stopping_rule():
                 break
-            self.__solution = cp.copy(self.__temporary_solution)
-        if (step == self.parameter_space_size + 1) and (
-        np.array_equal(cp.asnumpy(self.__solution), cp.asnumpy(self.__temporary_solution))):
+        if step == self.parameter_space_size + 1 and self.__stopping_rule():
             warn('Algorithm did not converge over given parameter space!', RuntimeWarning)
             self.__solution = cp.copy(self.initial)
         print('Total elapsed time: {}'.format(time() - start))
@@ -370,7 +395,6 @@ class Tikhonov(Estimator, Operator):
         self.previous = cp.copy(self.initial)
         self.current = cp.copy(self.initial)
         self.solution = cp.copy(self.initial)
-        self.parameter_grid: np.ndarray = np.flip(np.power(10, np.linspace(-15, 0, self.__parameter_space_size)))
         Estimator.estimate_q(self)
         Estimator.estimate_delta(self)
 
