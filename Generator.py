@@ -176,32 +176,34 @@ class LewisShedler(Generator):
         plt.clf()
 
 
-class Wicksell(Generator):
+class LSWW(Generator):
     def __init__(self, pdf: Union[Callable[[Union[float, np.ndarray]], Union[float, np.ndarray]], str],
                  sample_size: int, seed: float = None, **kwargs):
         """
-        Generator of observations in Wicksell's problem with an arbitrary probability density function.
-        :param pdf: Probability density function of the squared spheres radii. It can be specified as a callable and then
+        Generator of observations in Lord-Spector-Willis and Wicksell problem with an arbitrary probability density function.
+        :param pdf: Probability density function of the squared radii. It can be specified as a callable and then
         sampling is performed by using the inverse sampling method or as a string specifying the distribution from
-        numpy.random module.
+        numpy.random module. A correct pdf is expected, in case the integral is different than 1 a warining is raised
+        and a normalization is performed.
         :type pdf: callable or string
-        :param sample_size: theoretical sample size
+        :param sample_size: size of the experiment sample generated as a Poisson random variable with intensity sample size
         :type sample_size: int
         :param seed: seed value for reproducibility
         :type seed: float (default: None)
         :param kwargs: additional keyword arguments numpy random generator
         """
         super().__init__()
+        np.random.seed(seed)
         assert callable(pdf) | isinstance(pdf, str), 'Probability density function must be string or callable'
         self.pdf = pdf
         assert isinstance(sample_size, int), 'Sample size has to be specified as an integer'
-        self.sample_size = sample_size
+        self.sample_size = np.random.poisson(lam=sample_size, size=1)
+        print(self.sample_size)
         self.inverse_transformation: bool = isinstance(pdf, str)
         self.r_sample: Optional[np.ndarray] = None
         self.z_sample: Optional[np.ndarray] = None
         self.kwargs: dict = kwargs
-        np.random.seed(seed)
-        if not self.inverse_transformation and quad(self.pdf, 0, 1)[0] > 1.:
+        if not self.inverse_transformation and (quad(self.pdf, 0, 1)[0] > 1.000001 or quad(self.pdf, 0, 1)[0] < 0.999999):
             warn('Supplied pdf function is not a proper pdf function as it integrates to {}, running'
                  ' normalization'.format(quad(self.pdf, 0, 1)[0]), RuntimeWarning)
             normalize = quad(self.pdf, 0, 1)[0]
@@ -259,7 +261,7 @@ class Wicksell(Generator):
         ind: np.ndarray = np.less_equal(self.z_sample, np.sqrt(self.r_sample))
         self.r_sample = self.r_sample[ind]
         self.z_sample = self.z_sample[ind]
-        return np.sort(np.subtract(self.r_sample, np.square(self.z_sample)))
+        return np.sort(np.sqrt(np.subtract(self.r_sample, np.square(self.z_sample))))
 
     def visualize(self, save: bool = False) -> None:
         """
