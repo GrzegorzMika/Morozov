@@ -15,7 +15,7 @@ class EstimatorAbstract(metaclass=ABCMeta):
     @abstractmethod
     def refresh(self, *args, **kwargs):
         ...
-    
+
     @abstractmethod
     def estimate_q(self, *args, **kwargs):
         ...
@@ -108,10 +108,6 @@ class Estimator(EstimatorAbstract, Quadrature):
         self.__delta = delta
         print('Estimated noise level: {}'.format(delta))
 
-    @staticmethod
-    def __L2norm(x_gpu: cp.ndarray, y_gpu: cp.ndarray, weights: cp.ndarray) -> cp.ndarray:
-        return cp.sqrt(cp.sum(cp.multiply(cp.square(cp.subtract(x_gpu, y_gpu)), weights)))
-
     def L2norm(self, x: cp.ndarray, y: cp.ndarray) -> cp.ndarray:
         """
         Calculate the approximation of L2 norm of difference of two approximation of function.
@@ -121,4 +117,10 @@ class Estimator(EstimatorAbstract, Quadrature):
         :type y: np.ndarray
         :return: Float representing the L2 norm of difference between given functions.
         """
-        return self.__L2norm(x, y, self.__weights)
+        return cp.sqrt(cp.sum(cp.multiply(cp.square(cp.subtract(x, y)), self.__weights)))
+
+    def estimate(self):
+        raise NotImplementedError
+
+    def refresh(self):
+        raise NotImplementedError

@@ -1,11 +1,12 @@
-import os
 from time import time
 from typing import Callable, Union, Tuple
 from warnings import warn
+
 import cupy as cp
 import numpy as np
-from numpy import linalg as np_linalg
 from cupyx.scipy import linalg
+from numpy import linalg as np_linalg
+
 from GeneralEstimator import Estimator
 from Operator import Operator
 from decorators import timer
