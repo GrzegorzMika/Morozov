@@ -7,12 +7,12 @@ import numpy as np
 from cupyx.scipy import linalg
 from numpy import linalg as np_linalg
 
-from GeneralEstimator import Estimator
+from GeneralEstimator import EstimatorDiscretize
 from Operator import Operator
 from decorators import timer
 
 
-class Landweber(Estimator, Operator):
+class Landweber(EstimatorDiscretize, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
                  observations: np.ndarray, sample_size: int, adjoint: bool = False, quadrature: str = 'rectangle',
                  **kwargs):
@@ -42,7 +42,7 @@ class Landweber(Estimator, Operator):
              of an operator is divide by the value of relaxation parameter (float or int, default: 2).
         """
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
-        Estimator.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
+        EstimatorDiscretize.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
         self.kernel: Callable = kernel
         self.lower: float = float(lower)
         self.upper: float = float(upper)
@@ -69,8 +69,8 @@ class Landweber(Estimator, Operator):
         assert isinstance(self.__relaxation, float) | isinstance(self.__relaxation,
                                                                  int), 'Relaxation parameter must be a number'
         self.__relaxation = 1 / cp.square(cp.linalg.norm(self.KHK)) / self.__relaxation
-        Estimator.estimate_q(self)
-        Estimator.estimate_delta(self)
+        EstimatorDiscretize.estimate_q(self)
+        EstimatorDiscretize.estimate_delta(self)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
 
     @staticmethod
@@ -167,11 +167,11 @@ class Landweber(Estimator, Operator):
         """
         self.previous = self.initial
         self.current = self.initial
-        Estimator.estimate_q(self)
-        Estimator.estimate_delta(self)
+        EstimatorDiscretize.estimate_q(self)
+        EstimatorDiscretize.estimate_delta(self)
 
 
-class Tikhonov(Estimator, Operator):
+class Tikhonov(EstimatorDiscretize, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
                  observations: np.ndarray, sample_size: int, order: int = 1, adjoint: bool = False,
                  quadrature: str = 'rectangle', **kwargs):
@@ -206,7 +206,7 @@ class Tikhonov(Estimator, Operator):
 
         """
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
-        Estimator.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
+        EstimatorDiscretize.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
 
         self.kernel: Callable = kernel
         self.lower: float = float(lower)
@@ -237,8 +237,8 @@ class Tikhonov(Estimator, Operator):
         self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
         self.__KHKKHK: cp.ndarray = self.__premultiplication(self.KHK, self.KHK)
         self.identity: cp.ndarray = cp.identity(self.grid_size, dtype=cp.float64)
-        Estimator.estimate_q(self)
-        Estimator.estimate_delta(self)
+        EstimatorDiscretize.estimate_q(self)
+        EstimatorDiscretize.estimate_delta(self)
         self.smoothed_q_estimator = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
         self.smoothed_q_estimator = cp.matmul(self.KHK, self.q_estimator)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
@@ -396,11 +396,11 @@ class Tikhonov(Estimator, Operator):
         self.previous = cp.copy(self.initial)
         self.current = cp.copy(self.initial)
         self.solution = cp.copy(self.initial)
-        Estimator.estimate_q(self)
-        Estimator.estimate_delta(self)
+        EstimatorDiscretize.estimate_q(self)
+        EstimatorDiscretize.estimate_delta(self)
 
 
-class TSVD(Estimator, Operator):
+class TSVD(EstimatorDiscretize, Operator):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
                  observations: np.ndarray, sample_size: int, adjoint: bool = False, quadrature: str = 'rectangle',
                  **kwargs):
@@ -426,7 +426,7 @@ class TSVD(Estimator, Operator):
             - tau: Parameter used to rescale the obtained values of estimated noise level (float or int, default: 1).
         """
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
-        Estimator.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
+        EstimatorDiscretize.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
         self.kernel: Callable = kernel
         self.lower: float = float(lower)
         self.upper: float = float(upper)
@@ -441,8 +441,8 @@ class TSVD(Estimator, Operator):
         self.current: cp.ndarray = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
         Operator.approximate(self)
         self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
-        Estimator.estimate_q(self)
-        Estimator.estimate_delta(self)
+        EstimatorDiscretize.estimate_q(self)
+        EstimatorDiscretize.estimate_delta(self)
         self.__U: cp.ndarray = cp.zeros((self.grid_size, self.grid_size))
         self.__V: cp.ndarray = cp.zeros((self.grid_size, self.grid_size))
         self.__D: cp.ndarray = cp.zeros((self.grid_size,))
@@ -557,6 +557,6 @@ class TSVD(Estimator, Operator):
         Allow to re-estimate the q function, noise level and the target using new observations without need to recalculate
         the approximation of operator. To be used in conjunction with observations.setter.
         """
-        Estimator.estimate_q(self)
-        Estimator.estimate_delta(self)
+        EstimatorDiscretize.estimate_q(self)
+        EstimatorDiscretize.estimate_delta(self)
         self.current = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
