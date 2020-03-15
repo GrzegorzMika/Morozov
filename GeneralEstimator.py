@@ -1,14 +1,31 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 from typing import Callable, Union, Optional, List
-import numpy as np
+from warnings import warn
 import cupy as cp
-from numba import jit
+import numpy as np
 from Operator import Quadrature
 from decorators import timer
-from warnings import warn
 
 
-class Estimator(Quadrature):
+class EstimatorAbstract(metaclass=ABCMeta):
+    @abstractmethod
+    def estimate(self, *args, **kwargs):
+        ...
+
+    @abstractmethod
+    def refresh(self, *args, **kwargs):
+        ...
+    
+    @abstractmethod
+    def estimate_q(self, *args, **kwargs):
+        ...
+
+    @abstractmethod
+    def estimate_delta(self, *args, **kwargs):
+        ...
+
+
+class Estimator(EstimatorAbstract, Quadrature):
     def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
                  observations: np.ndarray, sample_size: int, quadrature: str = 'rectangle'):
         Quadrature.__init__(self, lower, upper, grid_size)
@@ -105,11 +122,3 @@ class Estimator(Quadrature):
         :return: Float representing the L2 norm of difference between given functions.
         """
         return self.__L2norm(x, y, self.__weights)
-
-    @abstractmethod
-    def estimate(self, *args, **kwargs):
-        ...
-
-    @abstractmethod
-    def refresh(self, *args, **kwargs):
-        ...
