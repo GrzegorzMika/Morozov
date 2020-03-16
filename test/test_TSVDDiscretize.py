@@ -3,7 +3,7 @@ import numpy as np
 import cupy as cp
 from numpy.testing import assert_equal, assert_almost_equal
 from pytest import raises
-from Estimators import TSVD
+from EstimatorsDiscretize import TSVD
 from Generator import LewisShedler
 
 

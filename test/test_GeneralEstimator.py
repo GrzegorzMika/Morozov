@@ -2,7 +2,7 @@ import numpy as np
 import cupy as cp
 from numpy.testing import assert_equal, assert_almost_equal
 from pytest import raises
-from GeneralEstimator import Estimator
+from GeneralEstimator import EstimatorDiscretize
 
 
 def identity(x, y):
@@ -11,7 +11,7 @@ def identity(x, y):
 
 observations = np.repeat(0, 30)
 
-estimator = Estimator(kernel=identity, lower=0, upper=1, grid_size=100, observations=observations, sample_size=50)
+estimator = EstimatorDiscretize(kernel=identity, lower=0, upper=1, grid_size=100, observations=observations, sample_size=50)
 
 
 class TestAttributes:
@@ -88,26 +88,32 @@ class TestFunctionalities:
 class TestException:
     def test_lower(self):
         with raises(AssertionError):
-            Estimator(kernel=identity, lower='a', upper=1, grid_size=100, observations=observations, sample_size=50)
+            EstimatorDiscretize(kernel=identity, lower='a', upper=1, grid_size=100, observations=observations, sample_size=50)
 
     def test_upper(self):
         with raises(AssertionError):
-            Estimator(kernel=identity, lower=0, upper='a', grid_size=100, observations=observations, sample_size=50)
+            EstimatorDiscretize(kernel=identity, lower=0, upper='a', grid_size=100, observations=observations, sample_size=50)
 
     def test_grid_size(self):
         with raises(AssertionError):
-            Estimator(kernel=identity, lower=0, upper=1, grid_size='a', observations=observations, sample_size=50)
+            EstimatorDiscretize(kernel=identity, lower=0, upper=1, grid_size='a', observations=observations, sample_size=50)
         with raises(AssertionError):
-            Estimator(kernel=identity, lower=0, upper=1, grid_size=10., observations=observations, sample_size=50)
+            EstimatorDiscretize(kernel=identity, lower=0, upper=1, grid_size=10., observations=observations, sample_size=50)
 
     def test_observations(self):
         with raises(AssertionError):
-            Estimator(kernel=identity, lower=0, upper=1, grid_size=100, observations=1, sample_size=50)
+            EstimatorDiscretize(kernel=identity, lower=0, upper=1, grid_size=100, observations=1, sample_size=50)
         with raises(AssertionError):
-            Estimator(kernel=identity, lower=0, upper=1, grid_size=100, observations=[1, 2], sample_size=50)
+            EstimatorDiscretize(kernel=identity, lower=0, upper=1, grid_size=100, observations=[1, 2], sample_size=50)
 
     def test_sample_size(self):
         with raises(AssertionError):
-            Estimator(kernel=identity, lower=0, upper=1, grid_size=100, observations=observations, sample_size='a')
+            EstimatorDiscretize(kernel=identity, lower=0, upper=1, grid_size=100, observations=observations, sample_size='a')
         with raises(AssertionError):
-            Estimator(kernel=identity, lower=0, upper=1, grid_size=100, observations=observations, sample_size=50.)
+            EstimatorDiscretize(kernel=identity, lower=0, upper=1, grid_size=100, observations=observations, sample_size=50.)
+
+    def test_not_implemented(self):
+        with raises(NotImplementedError):
+            estimator.estimate()
+        with raises(NotImplementedError):
+            estimator.refresh()

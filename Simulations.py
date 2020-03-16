@@ -2,7 +2,7 @@ import numpy as np
 import cupy as cp
 import pandas as pd
 from tqdm import tqdm
-from Estimators import Landweber, Tikhonov, TSVD
+from EstimatorsDiscretize import Landweber, Tikhonov, TSVD
 from Generator import LewisShedler
 
 print('Simulation 3...')

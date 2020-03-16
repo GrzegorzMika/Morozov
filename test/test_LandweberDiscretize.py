@@ -4,7 +4,7 @@ import cupy as cp
 from _pytest.recwarn import warns
 from numpy.testing import assert_equal, assert_almost_equal
 from pytest import raises
-from Estimators import Landweber
+from EstimatorsDiscretize import Landweber
 from Generator import LewisShedler
 
 

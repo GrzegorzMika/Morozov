@@ -560,3 +560,6 @@ class TSVD(EstimatorDiscretize, Operator):
         EstimatorDiscretize.estimate_q(self)
         EstimatorDiscretize.estimate_delta(self)
         self.current = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
+
+
+
