@@ -35,7 +35,7 @@ class Landweber(EstimatorDiscretize, Operator):
         :param quadrature: Type of quadrature used to approximate integrals.
         :type quadrature: str (default: recatngle)
         :param kwargs: Possible arguments:
-            - max_iter: The maximum number of iterations of the algorithm (int, default: 100).
+            - max_iter: The maximum number of iterations of the algorithm (int, default: 1000).
             - tau: Parameter used to rescale the obtained values of estimated noise level (float or int, default: 1).
             - initial: Initial guess for the solution (numpy.ndarray, default: 0).
             - relaxation: Parameter used in the iteration of the algorithm (step size, omega). This approximate square norm
@@ -68,7 +68,10 @@ class Landweber(EstimatorDiscretize, Operator):
         self.__relaxation: Union[float, int] = kwargs.get('relaxation', 2)
         assert isinstance(self.__relaxation, float) | isinstance(self.__relaxation,
                                                                  int), 'Relaxation parameter must be a number'
-        self.__relaxation = 1 / cp.square(cp.linalg.norm(self.KHK)) / self.__relaxation
+        # self.__relaxation = 2 / cp.square(cp.linalg.norm(self.KHK)) / self.__relaxation
+        # self.__relaxation = 1.999999 / np.linalg.norm(cp.asnumpy(self.KHK), 2) / self.__relaxation
+        self.__relaxation = 0.1 / (np.max(np.linalg.svd(cp.asnumpy(self.KHK), compute_uv=False, hermitian=True)))
+        print(self.relaxation)
         EstimatorDiscretize.estimate_q(self)
         EstimatorDiscretize.estimate_delta(self)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
@@ -121,11 +124,14 @@ class Landweber(EstimatorDiscretize, Operator):
         """
         One iteration of Landweber algorithm.
         :return: Numpy ndarray with the next approximation of solution from algorithm.
-        """
-        self.current = cp.add(self.previous, cp.multiply(self.relaxation,
-                                                         cp.matmul(self.KHK, cp.subtract(self.q_estimator,
-                                                                                         cp.matmul(self.KHK,
-                                                                                                   self.previous)))))
+        # """
+        # self.current = cp.add(self.previous, cp.multiply(self.relaxation,
+        #                                                  cp.matmul(self.KHK, cp.subtract(self.q_estimator,
+        #                                                                                  cp.matmul(self.KHK,
+        #                                                                                            self.previous)))))
+        self.current = cp.add(self.previous, cp.multiply(self.relaxation, cp.subtract(self.q_estimator,
+                                                                                      cp.matmul(self.KHK,
+                                                                                                self.previous))))
         return self.current
 
     def __stopping_rule(self) -> bool:
@@ -145,6 +151,7 @@ class Landweber(EstimatorDiscretize, Operator):
         The algorithm is prevented to take longer than max_iter iterations. If the algorithm did not converge, the initial
         solution is returned.
         """
+        import matplotlib.pyplot as plt
         it: int = 1
         start: float = time()
         condition: bool = self.__stopping_rule()
@@ -156,7 +163,7 @@ class Landweber(EstimatorDiscretize, Operator):
             condition = self.__stopping_rule()
             if it > self.max_iter:
                 warn('Maximum number of iterations reached!', RuntimeWarning)
-                self.previous = self.initial
+                # self.current = cp.copy(self.initial)
                 break
         print('Total elapsed time: {}'.format(time() - start))
 
@@ -165,8 +172,8 @@ class Landweber(EstimatorDiscretize, Operator):
         Allow to re-estimate the q function, noise level and the target using new observations without need to recalculate
         the approximation of operator. To be used in conjunction with observations.setter.
         """
-        self.previous = self.initial
-        self.current = self.initial
+        self.previous = cp.copy(self.initial)
+        self.current = cp.copy(self.initial)
         EstimatorDiscretize.estimate_q(self)
         EstimatorDiscretize.estimate_delta(self)
 
@@ -447,7 +454,7 @@ class TSVD(EstimatorDiscretize, Operator):
         self.__V: cp.ndarray = cp.zeros((self.grid_size, self.grid_size))
         self.__D: cp.ndarray = cp.zeros((self.grid_size,))
         self.__U, self.__D, self.__V = self.decomposition(self.KHK, self.grid_size)
-        self.smoothed_q_estimator = cp.matmul(self.__U.T, self.q_estimator)
+        # self.smoothed_q_estimator = cp.matmul(self.__U.T, self.q_estimator)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
 
     @staticmethod
@@ -464,14 +471,14 @@ class TSVD(EstimatorDiscretize, Operator):
         :type A: numpy ndarray
         :param size: One of dimensions of A.
         :type size: int
-        :return: Tuple [U, D, V] of matrices already moved to GPU memory representing the SVD decomposition as A = UDV.
+        :return: Tuple [U, D, V] of matrices already moved to GPU memory representing the SVD decomposition as A = UDVh.
         """
         A_cpu = cp.asnumpy(A)
         __U: np.ndarray = np.zeros((size, size))
         __D: np.ndarray = np.zeros((size,))
         __V: np.ndarray = np.zeros((size, size))
-        __U, __D, __V = np_linalg.svd(A_cpu, full_matrices=True, compute_uv=True)
-        return cp.asarray(__U), cp.asarray(__D), cp.asarray(__V)
+        __U, __D, __V = np_linalg.svd(A_cpu, full_matrices=True, compute_uv=True, hermitian=True)
+        return cp.asarray(__U), cp.asarray(np.flip(np.sort(__D))), cp.asarray(__V)
 
     @property
     def tau(self) -> float:
@@ -520,9 +527,12 @@ class TSVD(EstimatorDiscretize, Operator):
         values smaller than given are discarded.
         :type threshold: int
         """
-        diagonal_inv = np.where((self.__D >= threshold) & (self.__D > cp.finfo(cp.float64).eps), cp.divide(1, self.__D),
-                                0)
-        self.current = cp.matmul(self.__V.T, cp.matmul(cp.diag(diagonal_inv), self.smoothed_q_estimator))
+        # diagonal_inv = np.where((self.__D >= threshold) & (self.__D > cp.finfo(cp.float64).eps), cp.divide(1, self.__D),
+        #                         0)
+        # self.current = cp.matmul(self.__V.T, cp.matmul(cp.diag(diagonal_inv), self.smoothed_q_estimator))
+        self.current = cp.matmul(self.__V.T[:, :threshold],
+                                 cp.matmul(cp.diag(cp.divide(1, self.__D[:threshold])),
+                                           cp.matmul(self.__U[:, :threshold].T, self.q_estimator)))
 
     def __stopping_rule(self) -> bool:
         """
@@ -543,7 +553,7 @@ class TSVD(EstimatorDiscretize, Operator):
         start: float = time()
         for i, threshold in enumerate(cp.concatenate(((cp.max(self.__D) * 1.1).reshape(1, ), self.__D))):
             print('Number of eigenvalues included: {}'.format(i))
-            self.__estimate_one_step(threshold)
+            self.__estimate_one_step(i)
             if not self.__stopping_rule():
                 break
             if (self.current == self.previous).all() and i > 0:
@@ -560,6 +570,3 @@ class TSVD(EstimatorDiscretize, Operator):
         EstimatorDiscretize.estimate_q(self)
         EstimatorDiscretize.estimate_delta(self)
         self.current = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
-
-
-

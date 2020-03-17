@@ -41,7 +41,7 @@ class TSVD(EstimatorSpectrum):
             return lambda x: q_estimator(x) * function(x)
 
         def integrate(function: Callable) -> float:
-            return quad(function, lower, upper)[0]
+            return quad(function, lower, upper, limit=100)[0]
 
         singular_functions: list = [next(self.right_singular_functions) for _ in range(self.max_size)]
         products: Iterable = map(product, singular_functions)

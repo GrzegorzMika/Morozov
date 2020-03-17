@@ -198,7 +198,6 @@ class LSWW(Generator):
         self.pdf = pdf
         assert isinstance(sample_size, int), 'Sample size has to be specified as an integer'
         self.sample_size = np.random.poisson(lam=sample_size, size=1)
-        print(self.sample_size)
         self.inverse_transformation: bool = isinstance(pdf, str)
         self.r_sample: Optional[np.ndarray] = None
         self.z_sample: Optional[np.ndarray] = None
@@ -233,7 +232,7 @@ class LSWW(Generator):
 
     def sample_r(self):
         """
-        Sample the squared spheres radii according to the given probability density function.
+        Sample the spheres radii according to the given probability density function.
         """
         if not self.inverse_transformation:
             uniform: np.ndarray = np.random.uniform(0, 1, self.sample_size)
@@ -251,17 +250,17 @@ class LSWW(Generator):
 
     def generate(self) -> np.ndarray:
         """
-        Generate the points in the Wicksell's problem with a given probability density function. The algorithm is based on
-        the procedure described in 'NONPARAMETRIC CONFIDENCE BANDSIN WICKSELL’S PROBLEM', J.Wojdyła, Z.Szkutnik,
+        Generate the points in the Lord-Spektor-Willis problem with a given probability density function. The algorithm is based on
+        the procedure described in 'NONPARAMETRIC CONFIDENCE BANDS IN WICKSELL’S PROBLEM', J.Wojdyła, Z.Szkutnik,
         Statistica sinica 28 (2018), 93-113
         :return: Numpy array containing the observations.
         """
         self.sample_r()
         self.sample_z()
-        ind: np.ndarray = np.less_equal(self.z_sample, np.sqrt(self.r_sample))
+        ind: np.ndarray = np.less_equal(self.z_sample, self.r_sample)
         self.r_sample = self.r_sample[ind]
         self.z_sample = self.z_sample[ind]
-        return np.sort(np.sqrt(np.subtract(self.r_sample, np.square(self.z_sample))))
+        return np.sort(np.sqrt(np.subtract(np.square(self.r_sample), np.square(self.z_sample))))
 
     def visualize(self, save: bool = False) -> None:
         """
