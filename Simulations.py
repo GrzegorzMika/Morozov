@@ -1,100 +1,34 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import cupy as cp
-import pandas as pd
-from tqdm import tqdm
-from EstimatorsDiscretize import Landweber, Tikhonov, TSVD
 from Generator import LewisShedler
-
-print('Simulation 3...')
-n_size = 500
+from EstimatorsDiscretize import TSVD, Landweber
 
 
-def lam(t):
-    return np.divide(2, (t + 2) * (t ** 2 + 4 * t + 8)) * n_size
+ass = [1, 3, 5, 7, 10, 20, 50]
+sizes = [100, 1000, 5000, 10000, 50000]
+replicate = 5
 
+def f(t):
+    return t*(1-t)
 
-def kernel(x, y):
-    return np.exp(-x * y)
+for a in ass:
+    for size in sizes:
+        for i in range(replicate):
 
+            def kernel(s, t):
+                return np.exp(-a*np.abs(t-s))
 
-def true(s):
-    return np.exp(-2 * s) * np.square(np.sin(s))
+            def g(s):
+                return (2/a*s*(1-s)+1/a**2*(np.exp(-a*s) + np.exp(-a*(1-s))) + 2/a**3*(np.exp(-a*s) + np.exp(-a*(1-s)) -2))*size
 
+            gen = LewisShedler(g, 1, 0)
+            obs = gen.generate()
 
-generator = LewisShedler(lam, lower=0, upper=1)
-observations = generator.generate()
-tsvd = TSVD(kernel=kernel, lower=0, upper=1, grid_size=10000, observations=observations, sample_size=n_size,
-            adjoint=False)
+            tsvd = TSVD(kernel, 0, 1, 10000, obs, size, adjoint=True, tau=1)
+            tsvd.estimate()
 
-error = []
-for i in tqdm(range(50)):
-    tsvd.observations = generator.generate()
-    tsvd.refresh()
-    tsvd.estimate()
-    error.append(tsvd.L2norm(tsvd.current, cp.asarray(true(tsvd.grid))))
-results = pd.DataFrame({'error': error})
-results.to_csv('simulation1_tsvd.csv')
-del tsvd
-cp._default_memory_pool.free_all_blocks()
-print('Simulation 5...')
-n_size = 500
-
-
-def lam(t):
-    return np.add(np.subtract(t / 3, t ** 3), 2 * t ** 4 / 3) * n_size
-
-
-def kernel(x, y):
-    return np.where(x >= y, 2 * y, 0)
-
-
-def true(s):
-    return np.multiply(s, 1 - s)
-
-
-generator = LewisShedler(lam, lower=0, upper=1)
-observations = generator.generate()
-tsvd = TSVD(kernel=kernel, lower=0, upper=1, grid_size=10000, observations=observations, sample_size=n_size,
-            adjoint=False)
-
-error = []
-for i in tqdm(range(50)):
-    tsvd.observations = generator.generate()
-    tsvd.refresh()
-    tsvd.estimate()
-    error.append(tsvd.L2norm(tsvd.current, cp.asarray(true(tsvd.grid))))
-results = pd.DataFrame({'error': error})
-results.to_csv('simulation2_tsvd.csv')
-del tsvd
-cp._default_memory_pool.free_all_blocks()
-print('Simulation 6...')
-n_size = 500
-
-
-def lam(t):
-    return np.exp(-t) * ((np.pi * (1 + np.e)) / (1 + np.pi ** 2)) * n_size
-
-
-def kernel(x, y):
-    return np.exp(y - x)
-
-
-def true(s):
-    return np.sin(np.pi * s)
-
-
-generator = LewisShedler(lam, lower=0, upper=1)
-observations = generator.generate()
-tsvd = TSVD(kernel=kernel, lower=0, upper=1, grid_size=10000, observations=observations, sample_size=n_size,
-            adjoint=False)
-
-error = []
-for i in tqdm(range(50)):
-    tsvd.observations = generator.generate()
-    tsvd.refresh()
-    tsvd.estimate()
-    error.append(tsvd.L2norm(tsvd.current, cp.asarray(true(tsvd.grid))))
-results = pd.DataFrame({'error': error})
-results.to_csv('simulation3_tsvd.csv')
-del tsvd
-cp._default_memory_pool.free_all_blocks()
+            plt.plot(f(cp.asnumpy(tsvd.grid)), label='true')
+            plt.plot(cp.asnumpy(tsvd.solution), label='solution')
+            plt.legend()
+            plt.savefig('a{}_size{}_replication.png'.format(a, size, i))
