@@ -6,7 +6,7 @@ from EstimatorsDiscretize import TSVD, Landweber
 
 
 ass = [1, 3, 5, 7, 10, 20, 50]
-sizes = [100, 1000, 5000, 10000, 50000]
+sizes = [100, 1000, 5000]
 replicate = 5
 
 def f(t):

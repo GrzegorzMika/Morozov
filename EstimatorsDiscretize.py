@@ -242,12 +242,12 @@ class Tikhonov(EstimatorDiscretize, Operator):
         self.__solution: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
         Operator.approximate(self)
         self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
-        self.__KHKKHK: cp.ndarray = self.__premultiplication(self.KHK, self.KHK)
+        # self.__KHKKHK: cp.ndarray = self.__premultiplication(self.KHK, self.KHK)
         self.identity: cp.ndarray = cp.identity(self.grid_size, dtype=cp.float64)
         EstimatorDiscretize.estimate_q(self)
         EstimatorDiscretize.estimate_delta(self)
-        self.smoothed_q_estimator = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
-        self.smoothed_q_estimator = cp.matmul(self.KHK, self.q_estimator)
+        # self.smoothed_q_estimator = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
+        # self.smoothed_q_estimator = cp.matmul(self.KHK, self.q_estimator)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
         self.__define_grid()
 
@@ -277,15 +277,15 @@ class Tikhonov(EstimatorDiscretize, Operator):
     def KHK(self, KHK: cp.ndarray):
         self.__KHK = KHK.astype(cp.float64)
 
-    # noinspection PyPep8Naming
-    @property
-    def KHKKHK(self) -> cp.ndarray:
-        return self.__KHKKHK
-
-    # noinspection PyPep8Naming
-    @KHKKHK.setter
-    def KHKKHK(self, KHKKHK: cp.ndarray):
-        self.__KHKKHK = KHKKHK.astype(cp.float64)
+    # # noinspection PyPep8Naming
+    # @property
+    # def KHKKHK(self) -> cp.ndarray:
+    #     return self.__KHKKHK
+    #
+    # # noinspection PyPep8Naming
+    # @KHKKHK.setter
+    # def KHKKHK(self, KHKKHK: cp.ndarray):
+    #     self.__KHKKHK = KHKKHK.astype(cp.float64)
 
     @property
     def parameter_space_size(self) -> int:
@@ -343,8 +343,8 @@ class Tikhonov(EstimatorDiscretize, Operator):
         :type gamma: float
         :return: Numpy array with the solution in given iteration.
         """
-        LU, P = linalg.lu_factor(cp.add(self.KHKKHK, cp.multiply(gamma, self.identity)))
-        self.current = linalg.lu_solve((LU, P), cp.add(self.smoothed_q_estimator, cp.multiply(gamma, self.previous)))
+        LU, P = linalg.lu_factor(cp.add(self.KHK, cp.multiply(gamma, self.identity)))
+        self.current = linalg.lu_solve((LU, P), cp.add(self.q_estimator, cp.multiply(gamma, self.previous)))
 
     @timer
     def __estimate_one_step(self, gamma: cp.float64):
@@ -540,7 +540,10 @@ class TSVD(EstimatorDiscretize, Operator):
         than estimated noise level, then the algorithm will stop.
         :return: boolean representing whether the stop condition is reached (False) or not (True).
         """
-        return self.L2norm(cp.matmul(self.KHK, self.current), self.q_estimator) > (self.tau * self.delta)
+        # return self.L2norm(cp.matmul(self.KHK, self.current), self.q_estimator) > (self.tau * self.delta)
+        residual = cp.matmul(self.KHK, self.solution) - self.q_estimator
+        residual = cp.sqrt(cp.sum(cp.square(residual)) / self.grid_size)
+        return residual > (cp.sqrt(self.tau) * self.delta)
 
     def __update_solution(self):
         self.previous = cp.copy(self.current)
