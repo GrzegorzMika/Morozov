@@ -6,3 +6,4 @@ nohup.out
 .pytest_cache
 test/.pytest_cache
 dask-worker-space/*
+*.ipynb
