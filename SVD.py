@@ -22,7 +22,7 @@ class SpectrumGenerator(metaclass=ABCMeta):
 class LordWillisSpektor(SpectrumGenerator):
     def __init__(self, transformed_measure: bool = False):
         """
-        Calculate the singular values and l=right and left singular functions for the Lord-Spektor-Willis problem.
+        Calculate the singular values and right and left singular functions for the Lord-Willis-Spektor problem.
         The values can provided for the processes observed with respect to Lebesgue measure (transformed_measure = False)
         and then are calculated according to Z. Szkutnik, "Unfolding spheres size distribution from linear sections with
         b-splines and EMDS algorithm", Opuscula Mathematica, Vol. 27, No. 1, 2007 or with respect to respect to transformed
