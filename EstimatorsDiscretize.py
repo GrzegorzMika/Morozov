@@ -70,8 +70,7 @@ class Landweber(EstimatorDiscretize, Operator):
                                                                  int), 'Relaxation parameter must be a number'
         # self.__relaxation = 2 / cp.square(cp.linalg.norm(self.KHK)) / self.__relaxation
         # self.__relaxation = 1.999999 / np.linalg.norm(cp.asnumpy(self.KHK), 2) / self.__relaxation
-        self.__relaxation = 0.1 / (np.max(np.linalg.svd(cp.asnumpy(self.KHK), compute_uv=False, hermitian=True)))
-        print(self.relaxation)
+        self.__relaxation = 0.5 / (np.max(np.linalg.svd(cp.asnumpy(self.KHK), compute_uv=False, hermitian=True)))
         EstimatorDiscretize.estimate_q(self)
         EstimatorDiscretize.estimate_delta(self)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()

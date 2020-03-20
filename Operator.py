@@ -154,7 +154,10 @@ class Operator(Quadrature):
         :type t: Numpy ndarray
         :return: Numpy ndarray containing the nth column of the adjoint operator approximation.
         """
-        return self.kernel(self.__grid, t) * self.quadrature(t)
+        kernel = self.kernel
+        def adjoint_kernel(x, y):
+            return kernel(y, x)
+        return adjoint_kernel(t, self.__grid) * self.quadrature(t)
 
     @timer
     def approximate(self):
@@ -171,11 +174,9 @@ class Operator(Quadrature):
         else:
             column_list: List[np.ndarray] = [self.__adjoint_operator_column(t) for t in self.__grid]
             np.stack(column_list, axis=1, out=self.__KH)
-        self.__K = self.__K.astype(np.float64)
-        self.__KH = self.__KH.astype(np.float64)
         self.__move_to_gpu()
 
     @timer
     def __move_to_gpu(self):
-        self.__K = cp.asarray(self.__K)
-        self.__KH = cp.asarray(self.__KH)
+        self.__K = cp.asarray(self.__K.astype(np.float64))
+        self.__KH = cp.asarray(self.__KH.astype(np.float64))
