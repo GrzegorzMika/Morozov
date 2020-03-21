@@ -1,9 +1,9 @@
 from abc import abstractmethod, ABCMeta
 from typing import Callable, Union, Optional, List
 from warnings import warn
+
 import cupy as cp
 import numpy as np
-from numba import njit
 from scipy.integrate import quad
 
 from Operator import Quadrature
@@ -172,7 +172,7 @@ class EstimatorSpectrum(EstimatorAbstract):
             return np.square(kernel(x, y))
 
         def w_function(y: float) -> float:
-            return quad(kernel_integrand, self.lower, self.upper, args=y)[0]
+            return quad(kernel_integrand, self.lower, self.upper, args=y, limit=1000)[0]
 
         self.__w_function = np.vectorize(w_function)
 
@@ -180,6 +180,7 @@ class EstimatorSpectrum(EstimatorAbstract):
     def estimate_delta(self):
         print('Estimating noise level...')
         self.__w_function_calculation()
+        # self.delta = np.divide(np.sqrt(np.sum(self.__w_function(self.observations))), self.sample_size)
         self.delta = np.sqrt(np.divide(np.sum(self.__w_function(self.observations)), self.sample_size ** 2))
         print('Estimated noise level: {}'.format(self.delta))
 
