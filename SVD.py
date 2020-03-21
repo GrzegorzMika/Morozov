@@ -44,11 +44,11 @@ class LordWillisSpektor(SpectrumGenerator):
     def __left_transformed_measure(nu: int) -> Callable:
         return lambda y: 2 * np.cos((2 * nu + 1) * np.pi * np.square(y) / 2)
 
-    def __right_nontransformed_measure(self, nu: int) -> Callable:
-        return lambda x: self.As[nu]*np.power(x, 1.5)*jv(0.75, np.multiply(self.bessel_zeros[nu], np.square(x)))
+    def __right_nontransformed_measure(self, nu: int, As: float, zero: float) -> Callable:
+        return lambda x: As*np.power(x, 1.5)*jv(0.75, np.multiply(zero, np.square(x)))
 
-    def __left_nontransformed_measure(self, nu: int) -> Callable:
-        return lambda y: self.As[nu]*np.power(y, 1.5)*jv(-0.25, np.square(y))
+    def __left_nontransformed_measure(self, nu: int, As: float, zero: float) -> Callable:
+        return lambda y: As*np.power(y, 1.5)*jv(-0.25, np.multiply(zero, np.square(y)))
 
     @property
     def singular_values(self) -> float:
@@ -73,7 +73,7 @@ class LordWillisSpektor(SpectrumGenerator):
         else:
             nu = 0
             while True:
-                yield self.__right_nontransformed_measure(nu)
+                yield self.__right_nontransformed_measure(nu, self.As[nu], self.bessel_zeros[nu])
                 nu += 1
 
     @property
@@ -86,5 +86,5 @@ class LordWillisSpektor(SpectrumGenerator):
         else:
             nu = 0
             while True:
-                yield self.__left_nontransformed_measure(nu)
+                yield self.__left_nontransformed_measure(nu, self.As[nu], self.bessel_zeros[nu])
                 nu += 1
