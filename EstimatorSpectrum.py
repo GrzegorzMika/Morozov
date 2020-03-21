@@ -301,7 +301,7 @@ class Landweber(EstimatorSpectrum):
             - tau: Parameter used to rescale the obtained values of estimated noise level (float or int, default: 1).
             - max_size: Maximum number of functions included in Fourier expansion (int, default: 100).
             - relaxation: Parameter used in the iteration of the algorithm (step size, omega). The square of the first
-            singular value is scaled by this value(float, default: 0.1).
+            singular value is scaled by this value(float, default: 0.8).
             - max_iter: Maximum number of iterations of the algorithm (int, default: 100)
         """
         EstimatorSpectrum.__init__(self, kernel, observations, sample_size, lower, upper)
@@ -316,7 +316,7 @@ class Landweber(EstimatorSpectrum):
         self.tau: Union[float, int] = kwargs.get('tau', 1)
         self.max_size: int = kwargs.get('max_size', 100)
         self.max_iter: int = kwargs.get('max_iter', 100)
-        self.__relaxation: float = kwargs.get('relaxation', 0.1)
+        self.__relaxation: float = kwargs.get('relaxation', 0.8)
         self.q_fourier_coeffs: np.ndarray = np.repeat([0], self.max_size)
         self.sigmas: np.ndarray = np.repeat([0], self.max_size)
         self.regularization_param: int = 0
@@ -384,7 +384,7 @@ class Landweber(EstimatorSpectrum):
         :return: Result of applying regularization function to argument lambda.
         """
         if not k:
-            return np.multiply(lam, 0)  # TODO: is it correct?
+            return np.multiply(lam, 0)
         else:
             iterations = [np.power(np.subtract(1, np.multiply(beta, lam)), j) for j in range(k)]
             iterations = np.stack(iterations, axis=1)
