@@ -91,7 +91,6 @@ class EstimatorDiscretize(EstimatorAbstract, Quadrature):
     def estimate_q(self):
         """
         Estimate function q on given grid based on the observations.
-        :return: Return numpy array containing estimated function q.
         """
         print('Estimating q function...')
         estimator_list: List[np.ndarray] = \
@@ -102,8 +101,7 @@ class EstimatorDiscretize(EstimatorAbstract, Quadrature):
     @timer
     def estimate_delta(self):
         """
-        Estimate noise level based on the observations and approximation of function v.
-        :return: Float indicating the estimated noise level.
+        Estimate noise level based on the observations and approximation of function w.
         """
         print('Estimating noise level...')
         w_function_list: List[np.ndarray] = \
@@ -154,6 +152,9 @@ class EstimatorSpectrum(EstimatorAbstract):
 
     @timer
     def estimate_q(self) -> None:
+        """
+        Estimate function q based on the observations using the known kernel.
+        """
         print('Estimating q function...')
         observations: np.ndarray = self.observations
         kernel: Callable = self.kernel
@@ -166,21 +167,26 @@ class EstimatorSpectrum(EstimatorAbstract):
         self.q_estimator = np.vectorize(__q_estimator)
 
     def __w_function_calculation(self) -> None:
+        """
+        Calculate the w function based on the known kernel to be used for the noise level estimation.
+        """
         kernel: Callable = self.kernel
 
         def kernel_integrand(x: float, y: float) -> np.float64:
             return np.square(kernel(x, y))
 
         def w_function(y: float) -> float:
-            return quad(kernel_integrand, self.lower, self.upper, args=y, limit=1000)[0]
+            return quad(kernel_integrand, self.lower, self.upper, args=y, limit=5000)[0]
 
         self.__w_function = np.vectorize(w_function)
 
     @timer
     def estimate_delta(self):
+        """
+        Estimate noise level based on the observations and known kernel (via w function).
+        """
         print('Estimating noise level...')
         self.__w_function_calculation()
-        # self.delta = np.divide(np.sqrt(np.sum(self.__w_function(self.observations))), self.sample_size)
         self.delta = np.sqrt(np.divide(np.sum(self.__w_function(self.observations)), self.sample_size ** 2))
         print('Estimated noise level: {}'.format(self.delta))
 

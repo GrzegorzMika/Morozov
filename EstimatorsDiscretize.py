@@ -23,7 +23,7 @@ class Landweber(EstimatorDiscretize, Operator):
         :param lower: Lower end of the interval on which the operator is defined.
         :type lower: float
         :param upper: Upper end of the interval on which the operator is defined.
-        :type lower: float
+        :type upper: float
         :param grid_size: Size pf grid used to approximate the operator.
         :type grid_size: int
         :param observations: Observations used for the estimation.
@@ -67,9 +67,7 @@ class Landweber(EstimatorDiscretize, Operator):
         self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
         self.__relaxation: Union[float, int] = kwargs.get('relaxation', 2)
         assert isinstance(self.__relaxation, float) | isinstance(self.__relaxation,
-                                                                 int), 'Relaxation parameter must be a number'
-        # self.__relaxation = 2 / cp.square(cp.linalg.norm(self.KHK)) / self.__relaxation
-        # self.__relaxation = 1.999999 / np.linalg.norm(cp.asnumpy(self.KHK), 2) / self.__relaxation
+                                                                 int), 'Relaxation parameter must be a number'  # TODO: custom relaxation
         self.__relaxation = 0.5 / (np.max(np.linalg.svd(cp.asnumpy(self.KHK), compute_uv=False, hermitian=True)))
         EstimatorDiscretize.estimate_q(self)
         EstimatorDiscretize.estimate_delta(self)
@@ -188,7 +186,7 @@ class Tikhonov(EstimatorDiscretize, Operator):
         :param lower: Lower end of the interval on which the operator is defined.
         :type lower: float
         :param upper: Upper end of the interval on which the operator is defined.
-        :type lower: float
+        :type upper: float
         :param grid_size: Size pf grid used to approximate the operator.
         :type grid_size: int
         :param observations: Observations used for the estimation.
@@ -241,12 +239,9 @@ class Tikhonov(EstimatorDiscretize, Operator):
         self.__solution: cp.ndarray = cp.copy(self.initial).astype(cp.float64)
         Operator.approximate(self)
         self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
-        # self.__KHKKHK: cp.ndarray = self.__premultiplication(self.KHK, self.KHK)
         self.identity: cp.ndarray = cp.identity(self.grid_size, dtype=cp.float64)
         EstimatorDiscretize.estimate_q(self)
         EstimatorDiscretize.estimate_delta(self)
-        # self.smoothed_q_estimator = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
-        # self.smoothed_q_estimator = cp.matmul(self.KHK, self.q_estimator)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
         self.__define_grid()
 
@@ -275,16 +270,6 @@ class Tikhonov(EstimatorDiscretize, Operator):
     @KHK.setter
     def KHK(self, KHK: cp.ndarray):
         self.__KHK = KHK.astype(cp.float64)
-
-    # # noinspection PyPep8Naming
-    # @property
-    # def KHKKHK(self) -> cp.ndarray:
-    #     return self.__KHKKHK
-    #
-    # # noinspection PyPep8Naming
-    # @KHKKHK.setter
-    # def KHKKHK(self, KHKKHK: cp.ndarray):
-    #     self.__KHKKHK = KHKKHK.astype(cp.float64)
 
     @property
     def parameter_space_size(self) -> int:
@@ -411,13 +396,13 @@ class TSVD(EstimatorDiscretize, Operator):
                  observations: np.ndarray, sample_size: int, adjoint: bool = False, quadrature: str = 'rectangle',
                  **kwargs):
         """
-        Instance of Landweber solver for inverse problem in Poisson noise with integral operator.
+        Instance of TSVD solver for inverse problem in Poisson noise with integral operator.
         :param kernel: Kernel of the integral operator.
         :type kernel: Callable
         :param lower: Lower end of the interval on which the operator is defined.
         :type lower: float
         :param upper: Upper end of the interval on which the operator is defined.
-        :type lower: float
+        :type upper: float
         :param grid_size: Size pf grid used to approximate the operator.
         :type grid_size: int
         :param observations: Observations used for the estimation.
