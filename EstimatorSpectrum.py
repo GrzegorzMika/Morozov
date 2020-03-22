@@ -48,7 +48,8 @@ class TSVD(EstimatorSpectrum):
         self.sigmas: np.ndarray = np.repeat([0], self.max_size)
         self.regularization_param: float = 0.
         self.oracle_param: Optional[float] = None
-        self.residual: float = 0.
+        self.oracle_loss: Optional[float] = None
+        self.residual: Optional[float] = None
         self.vs: list = []
         self.solution: Optional[Callable] = None
         self.client = Client(threads_per_worker=1, n_workers=cpu_count())
@@ -121,7 +122,6 @@ class TSVD(EstimatorSpectrum):
                             1)), np.square(self.q_fourier_coeffs))))
             self.regularization_param = alpha
             if residual <= np.sqrt(self.tau) * self.delta:
-                self.residual = residual
                 break
 
         def solution(x: Union[float, int]) -> np.ndarray:
@@ -148,6 +148,10 @@ class TSVD(EstimatorSpectrum):
         parameters = []
         best_loss = np.inf
         counter = 0
+
+        def residual(solution):
+            return lambda x: np.square(true(x) - solution(x))
+
         for alpha in np.square(np.concatenate([[np.inf], self.sigmas])):
             parameters.append(alpha)
 
@@ -158,10 +162,7 @@ class TSVD(EstimatorSpectrum):
 
             solution = np.vectorize(solution)
 
-            def residual(solution=solution):
-                return lambda x: np.square(true(x) - solution(x))
-
-            res = residual()
+            res = residual(solution)
             loss = quad(res, self.lower, self.upper, limit=10000)[0]
             losses.append(loss)
             if loss <= best_loss:
@@ -171,7 +172,10 @@ class TSVD(EstimatorSpectrum):
                 counter += 1
             if counter == patience:
                 break
+        res = residual(solution=self.solution)
         self.oracle_param = parameters[losses.index(min(losses))]
+        self.oracle_loss = min(losses)
+        self.residual = quad(res, self.lower, self.upper, limit=10000)[0]
 
 
 class Tikhonov(EstimatorSpectrum):
@@ -217,7 +221,8 @@ class Tikhonov(EstimatorSpectrum):
         self.sigmas: np.ndarray = np.repeat([0], self.max_size)
         self.regularization_param: float = 0.
         self.oracle_param: Optional[float] = None
-        self.residual: float = 0.
+        self.oracle_loss: Optional[float] = None
+        self.residual: Optional[float] = None
         self.vs: list = []
         self.solution: Optional[Callable] = None
         self.client = Client(threads_per_worker=1, n_workers=cpu_count())
@@ -328,6 +333,10 @@ class Tikhonov(EstimatorSpectrum):
         parameters = []
         best_loss = np.inf
         counter = 0
+
+        def residual(solution):
+            return lambda x: np.square(true(x) - solution(x))
+
         for alpha in np.flip(np.linspace(0, 3, 1000)):
             parameters.append(alpha)
 
@@ -338,10 +347,7 @@ class Tikhonov(EstimatorSpectrum):
 
             solution = np.vectorize(solution)
 
-            def residual(solution=solution):
-                return lambda x: np.square(true(x) - solution(x))
-
-            res = residual()
+            res = residual(solution)
             loss = quad(res, self.lower, self.upper, limit=10000)[0]
             losses.append(loss)
             if loss <= best_loss:
@@ -351,7 +357,10 @@ class Tikhonov(EstimatorSpectrum):
                 counter += 1
             if counter == patience:
                 break
+        res = residual(solution=self.solution)
         self.oracle_param = parameters[losses.index(min(losses))]
+        self.oracle_loss = min(losses)
+        self.residual = quad(res, self.lower, self.upper, limit=10000)[0]
 
 
 class Landweber(EstimatorSpectrum):
@@ -399,7 +408,8 @@ class Landweber(EstimatorSpectrum):
         self.sigmas: np.ndarray = np.repeat([0], self.max_size)
         self.regularization_param: int = 0
         self.oracle_param: Optional[float] = None
-        self.residual: float = 0.
+        self.oracle_loss: Optional[float] = None
+        self.residual: Optional[float] = None
         self.vs: list = []
         self.solution: Optional[Callable] = None
         self.client = Client(threads_per_worker=1, n_workers=cpu_count())
@@ -512,11 +522,14 @@ class Landweber(EstimatorSpectrum):
         :param patience: Number of consecutive iterations to observe the loss behavior after the minimum was found to
         prevent to stack in local minimum (default: 3).
         """
-        # import matplotlib.pyplot as plt
         losses = []
         parameters = []
         best_loss = np.inf
         counter = 0
+
+        def residual(solution):
+            return lambda x: np.square(true(x) - solution(x))
+
         for k in np.arange(0, self.max_iter):
             parameters.append(k)
 
@@ -525,18 +538,9 @@ class Landweber(EstimatorSpectrum):
                     np.multiply(np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
                                             self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
 
-            # solution = np.vectorize(solution)
-            # plt.plot(solution(np.linspace(0, 1, 1000)), label='solution')
-            # plt.plot(true(np.linspace(0, 1, 1000)), label='true')
-            # plt.title('Iteration: {}'.format(k))
-            # plt.legend()
-            # plt.show()
-            # plt.clf()
+            solution = np.vectorize(solution)
 
-            def residual(solution=solution):
-                return lambda x: np.square(true(x) - solution(x))
-
-            res = residual()
+            res = residual(solution)
             loss = quad(res, self.lower, self.upper, limit=10000)[0]
             losses.append(loss)
             if loss <= best_loss:
@@ -546,4 +550,7 @@ class Landweber(EstimatorSpectrum):
                 counter += 1
             if counter == patience:
                 break
+        res = residual(solution=self.solution)
         self.oracle_param = parameters[losses.index(min(losses))]
+        self.oracle_loss = min(losses)
+        self.residual = quad(res, self.lower, self.upper, limit=10000)[0]

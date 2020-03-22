@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from EstimatorSpectrum import TSVD
+from EstimatorSpectrum import TSVD, Landweber
 from Generator import LewisShedler
 from SVD import LordWillisSpektor
 
@@ -11,7 +11,7 @@ def true(x):
     return np.multiply(x ** 3, 1 - x) * 20
 
 
-size = 2000
+size = 10000
 
 
 def kernel(x, y):
@@ -21,6 +21,7 @@ def kernel(x, y):
 if __name__ == '__main__':
     parameter = []
     oracle = []
+    oracle_error = []
     solutions = []
     residual = []
     for _ in tqdm(range(1000)):
@@ -42,12 +43,14 @@ if __name__ == '__main__':
 
         tsvd.estimate()
         tsvd.oracle(true)
-        solution = list(tsvd.solution(np.linspace(0, 1, 1000)))
+        solution = list(tsvd.solution(np.linspace(0, 1, 10000)))
         parameter.append(tsvd.regularization_param)
         oracle.append(tsvd.oracle_param)
+        oracle_error.append(tsvd.oracle_loss)
         solutions.append(solution)
         residual.append(tsvd.residual)
         tsvd.refresh()
 
-    results = pd.DataFrame({'Parameter': parameter, 'Oracle': oracle, 'Residual': residual, 'Solution': solutions})
+    results = pd.DataFrame({'Parameter': parameter, 'Oracle': oracle, 'Oracle_loss': oracle_error,
+                            'Residual': residual, 'Solution': solutions})
     results.to_csv('Simulation1.csv')
