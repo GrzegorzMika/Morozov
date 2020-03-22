@@ -106,6 +106,7 @@ class TSVD(EstimatorSpectrum):
         """
         return np.where(lam >= alpha, np.divide(1, lam), 0)
 
+    @timer
     def estimate(self) -> None:
         """
         Implementation of truncated singular value decomposition algorithm for inverse problem with stopping rule
@@ -137,6 +138,7 @@ class TSVD(EstimatorSpectrum):
         """
         self.client.close()
 
+    @timer
     def oracle(self, true: Callable, patience: int = 3) -> None:
         """
         Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
@@ -149,8 +151,8 @@ class TSVD(EstimatorSpectrum):
         best_loss = np.inf
         counter = 0
 
-        def residual(solution):
-            return lambda x: np.square(true(x) - solution(x))
+        def residual(function):
+            return lambda x: np.square(true(x) - function(x))
 
         for alpha in np.square(np.concatenate([[np.inf], self.sigmas])):
             parameters.append(alpha)
@@ -172,7 +174,7 @@ class TSVD(EstimatorSpectrum):
                 counter += 1
             if counter == patience:
                 break
-        res = residual(solution=self.solution)
+        res = residual(function=self.solution)
         self.oracle_param = parameters[losses.index(min(losses))]
         self.oracle_loss = min(losses)
         self.residual = quad(res, self.lower, self.upper, limit=10000)[0]
@@ -289,6 +291,7 @@ class Tikhonov(EstimatorSpectrum):
         return np.divide(np.power(lam + alpha, order) - np.power(alpha, order),
                          np.multiply(lam, np.power(lam + alpha, order)))
 
+    @timer
     def estimate(self) -> None:
         """
         Implementation of iterated Tikhonv algorithm for inverse problem with stopping rule based on Morozov discrepancy principle.
@@ -322,6 +325,7 @@ class Tikhonov(EstimatorSpectrum):
         """
         self.client.close()
 
+    @timer
     def oracle(self, true: Callable, patience: int = 3) -> None:
         """
         Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
@@ -481,6 +485,7 @@ class Landweber(EstimatorSpectrum):
             regularization = np.sum(iterations, axis=1) * beta
             return regularization
 
+    @timer
     def estimate(self) -> None:
         """
         Implementation of Landweber algorithm for inverse problem with stopping rule based on Morozov discrepancy principle.
@@ -515,6 +520,7 @@ class Landweber(EstimatorSpectrum):
         """
         self.client.close()
 
+    @timer
     def oracle(self, true: Callable, patience: int = 3) -> None:
         """
         Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
