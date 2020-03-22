@@ -47,6 +47,7 @@ class TSVD(EstimatorSpectrum):
         self.q_fourier_coeffs: np.ndarray = np.repeat([0], self.max_size)
         self.sigmas: np.ndarray = np.repeat([0], self.max_size)
         self.regularization_param: float = 0.
+        self.oracle_param: Optional[float] = None
         self.vs: list = []
         self.solution: Optional[Callable] = None
         self.client = Client(threads_per_worker=1, n_workers=cpu_count())
@@ -134,6 +135,42 @@ class TSVD(EstimatorSpectrum):
         """
         pass
 
+    def oracle(self, true: Callable, patience: int = 3) -> None:
+        """
+        Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
+        :param true: True solution.
+        :param patience: Number of consecutive iterations to observe the loss behavior after the minimum was found to
+        prevent to stack in local minimum (default: 3).
+        """
+        losses = []
+        parameters = []
+        best_loss = np.inf
+        counter = 0
+        for alpha in np.square(np.concatenate([[np.inf], self.sigmas])):
+            parameters.append(alpha)
+
+            def solution(x: Union[float, int]) -> np.ndarray:
+                return np.sum(
+                    np.multiply(np.multiply(self.__regularization(np.square(self.sigmas), alpha),
+                                            self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
+
+            solution = np.vectorize(solution)
+
+            def residual(solution=solution):
+                return lambda x: np.square(true(x) - solution(x))
+
+            res = residual()
+            loss = quad(res, self.lower, self.upper, limit=5000)[0]
+            losses.append(loss)
+            if loss <= best_loss:
+                best_loss = loss
+                counter = 0
+            else:
+                counter += 1
+            if counter == patience:
+                break
+        self.oracle_param = parameters[losses.index(min(losses))]
+
 
 class Tikhonov(EstimatorSpectrum):
     def __init__(self, kernel, singular_values, left_singular_functions, right_singular_functions, observations,
@@ -177,6 +214,7 @@ class Tikhonov(EstimatorSpectrum):
         self.q_fourier_coeffs: np.ndarray = np.repeat([0], self.max_size)
         self.sigmas: np.ndarray = np.repeat([0], self.max_size)
         self.regularization_param: float = 0.
+        self.oracle_param: Optional[float] = None
         self.vs: list = []
         self.solution: Optional[Callable] = None
         self.client = Client(threads_per_worker=1, n_workers=cpu_count())
@@ -252,7 +290,7 @@ class Tikhonov(EstimatorSpectrum):
         self.__find_fourier_coeffs()
         self.estimate_delta()
 
-        for alpha in np.flip(np.linspace(0, 10, 1000)):  # warm start required
+        for alpha in np.flip(np.linspace(0, 3, 1000)):  # warm start required
             residual = np.sqrt(np.sum(np.multiply(np.square(
                 np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha, self.order),
                                         np.square(self.sigmas)),
@@ -274,6 +312,42 @@ class Tikhonov(EstimatorSpectrum):
         Just to be consistent with general guidelines.
         """
         pass
+
+    def oracle(self, true: Callable, patience: int = 3) -> None:
+        """
+        Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
+        :param true: True solution.
+        :param patience: Number of consecutive iterations to observe the loss behavior after the minimum was found to
+        prevent to stack in local minimum (default: 3).
+        """
+        losses = []
+        parameters = []
+        best_loss = np.inf
+        counter = 0
+        for alpha in np.flip(np.linspace(0, 3, 1000)):
+            parameters.append(alpha)
+
+            def solution(x: Union[float, int]) -> np.ndarray:
+                return np.sum(
+                    np.multiply(np.multiply(self.__regularization(np.square(self.sigmas), alpha, self.order),
+                                            self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
+
+            solution = np.vectorize(solution)
+
+            def residual(solution=solution):
+                return lambda x: np.square(true(x) - solution(x))
+
+            res = residual()
+            loss = quad(res, self.lower, self.upper, limit=5000)[0]
+            losses.append(loss)
+            if loss <= best_loss:
+                best_loss = loss
+                counter = 0
+            else:
+                counter += 1
+            if counter == patience:
+                break
+        self.oracle_param = parameters[losses.index(min(losses))]
 
 
 class Landweber(EstimatorSpectrum):
@@ -320,6 +394,7 @@ class Landweber(EstimatorSpectrum):
         self.q_fourier_coeffs: np.ndarray = np.repeat([0], self.max_size)
         self.sigmas: np.ndarray = np.repeat([0], self.max_size)
         self.regularization_param: int = 0
+        self.oracle_param: Optional[float] = None
         self.vs: list = []
         self.solution: Optional[Callable] = None
         self.client = Client(threads_per_worker=1, n_workers=cpu_count())
@@ -366,7 +441,7 @@ class Landweber(EstimatorSpectrum):
         """
         sigma: list = [next(self.singular_values) for _ in range(self.max_size)]
         self.sigmas = np.array(sigma)
-        self.relaxation = 1/(self.sigmas[0]**2)*self.relaxation
+        self.relaxation = 1 / (self.sigmas[0] ** 2) * self.relaxation
 
     def __singular_functions(self) -> None:
         """
@@ -388,7 +463,7 @@ class Landweber(EstimatorSpectrum):
         else:
             iterations = [np.power(np.subtract(1, np.multiply(beta, lam)), j) for j in range(k)]
             iterations = np.stack(iterations, axis=1)
-            regularization = np.sum(iterations, axis=1)*beta
+            regularization = np.sum(iterations, axis=1) * beta
             return regularization
 
     def estimate(self) -> None:
@@ -412,8 +487,9 @@ class Landweber(EstimatorSpectrum):
         def solution(x: Union[float, int]) -> np.ndarray:
             return np.sum(
                 np.multiply(
-                    np.multiply(self.__regularization(np.square(self.sigmas), self.regularization_param, self.relaxation),
-                                self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
+                    np.multiply(
+                        self.__regularization(np.square(self.sigmas), self.regularization_param, self.relaxation),
+                        self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
 
         self.solution = np.vectorize(solution)
 
@@ -422,3 +498,46 @@ class Landweber(EstimatorSpectrum):
         Just to be consistent with general guidelines.
         """
         pass
+
+    def oracle(self, true: Callable, patience: int = 3) -> None:
+        """
+        Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
+        :param true: True solution.
+        :param patience: Number of consecutive iterations to observe the loss behavior after the minimum was found to
+        prevent to stack in local minimum (default: 3).
+        """
+        # import matplotlib.pyplot as plt
+        losses = []
+        parameters = []
+        best_loss = np.inf
+        counter = 0
+        for k in np.arange(0, self.max_iter):
+            parameters.append(k)
+
+            def solution(x: Union[float, int]) -> np.ndarray:
+                return np.sum(
+                    np.multiply(np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
+                                            self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
+
+            # solution = np.vectorize(solution)
+            # plt.plot(solution(np.linspace(0, 1, 1000)), label='solution')
+            # plt.plot(true(np.linspace(0, 1, 1000)), label='true')
+            # plt.title('Iteration: {}'.format(k))
+            # plt.legend()
+            # plt.show()
+            # plt.clf()
+
+            def residual(solution=solution):
+                return lambda x: np.square(true(x) - solution(x))
+
+            res = residual()
+            loss = quad(res, self.lower, self.upper, limit=5000)[0]
+            losses.append(loss)
+            if loss <= best_loss:
+                best_loss = loss
+                counter = 0
+            else:
+                counter += 1
+            if counter == patience:
+                break
+        self.oracle_param = parameters[losses.index(min(losses))]
