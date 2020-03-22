@@ -11,7 +11,7 @@ def true(x):
     return np.multiply(x ** 3, 1 - x) * 20
 
 
-size = 10000
+size = 2000
 
 
 def kernel(x, y):
