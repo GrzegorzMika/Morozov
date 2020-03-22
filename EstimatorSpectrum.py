@@ -70,7 +70,7 @@ class TSVD(EstimatorSpectrum):
             return lambda x: q_estimator(x) * function(x)
 
         def integrate(function: Callable) -> float:
-            return quad(function, lower, upper, limit=5000)[0]
+            return quad(function, lower, upper, limit=10000)[0]
 
         products: Iterable = map(product, self.vs)
 
@@ -162,7 +162,7 @@ class TSVD(EstimatorSpectrum):
                 return lambda x: np.square(true(x) - solution(x))
 
             res = residual()
-            loss = quad(res, self.lower, self.upper, limit=5000)[0]
+            loss = quad(res, self.lower, self.upper, limit=10000)[0]
             losses.append(loss)
             if loss <= best_loss:
                 best_loss = loss
@@ -247,7 +247,7 @@ class Tikhonov(EstimatorSpectrum):
             return lambda x: q_estimator(x) * function(x)
 
         def integrate(function: Callable) -> float:
-            return quad(function, lower, upper, limit=5000)[0]
+            return quad(function, lower, upper, limit=10000)[0]
 
         products: Iterable = map(product, self.vs)
 
@@ -342,7 +342,7 @@ class Tikhonov(EstimatorSpectrum):
                 return lambda x: np.square(true(x) - solution(x))
 
             res = residual()
-            loss = quad(res, self.lower, self.upper, limit=5000)[0]
+            loss = quad(res, self.lower, self.upper, limit=10000)[0]
             losses.append(loss)
             if loss <= best_loss:
                 best_loss = loss
@@ -429,7 +429,7 @@ class Landweber(EstimatorSpectrum):
             return lambda x: q_estimator(x) * function(x)
 
         def integrate(function: Callable) -> float:
-            return quad(function, lower, upper, limit=5000)[0]
+            return quad(function, lower, upper, limit=10000)[0]
 
         products: Iterable = map(product, self.vs)
 
@@ -537,7 +537,7 @@ class Landweber(EstimatorSpectrum):
                 return lambda x: np.square(true(x) - solution(x))
 
             res = residual()
-            loss = quad(res, self.lower, self.upper, limit=5000)[0]
+            loss = quad(res, self.lower, self.upper, limit=10000)[0]
             losses.append(loss)
             if loss <= best_loss:
                 best_loss = loss

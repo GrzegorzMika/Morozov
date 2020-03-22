@@ -176,7 +176,7 @@ class EstimatorSpectrum(EstimatorAbstract):
             return np.square(kernel(x, y))
 
         def w_function(y: float) -> float:
-            return quad(kernel_integrand, self.lower, self.upper, args=y, limit=5000)[0]
+            return quad(kernel_integrand, self.lower, self.upper, args=y, limit=10000)[0]
 
         self.__w_function = np.vectorize(w_function)
 

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from EstimatorSpectrum import TSVD
 from Generator import LewisShedler
@@ -10,7 +11,7 @@ def true(x):
     return np.multiply(x ** 3, 1 - x) * 20
 
 
-size = 10000
+size = 2000
 
 
 def kernel(x, y):
@@ -22,7 +23,7 @@ if __name__ == '__main__':
     oracle = []
     solutions = []
     residual = []
-    for _ in range(1000):
+    for _ in tqdm(range(1000)):
         lsw = LordWillisSpektor(transformed_measure=False)
         right = lsw.right_functions
 
