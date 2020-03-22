@@ -1,38 +1,52 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import cupy as cp
+import pandas as pd
+
+from EstimatorSpectrum import TSVD
 from Generator import LewisShedler
-from EstimatorsDiscretize import TSVD, Landweber
+from SVD import LordWillisSpektor
 
 
-def f(t):
-    return t * (1 - t)
+def true(x):
+    return np.multiply(x ** 3, 1 - x) * 20
 
 
-a = 5
+size = 10000
 
 
-def kernel(s, t):
-    return np.exp(-a * np.abs(t - s))
+def kernel(x, y):
+    return np.where(x >= y, 2 * y, 0)
 
 
-size = 200000
+if __name__ == '__main__':
+    parameter = []
+    oracle = []
+    solutions = []
+    residual = []
+    for _ in range(1000):
+        lsw = LordWillisSpektor(transformed_measure=False)
+        right = lsw.right_functions
+
+        size_n = np.random.poisson(lam=size, size=None)
 
 
-def g(s):
-    return (2 / a * s * (1 - s) + 1 / a ** 2 * (np.exp(-a * s) + np.exp(-a * (1 - s))) + 2 / a ** 3 * (
-                np.exp(-a * s) + np.exp(-a * (1 - s)) - 2)) * size
+        def g(x):
+            return 2 * size_n * (4 * np.power(x, 6) - 5 * np.power(x, 5) + x)
 
 
-gen = LewisShedler(g, 1, 0)
-obs = gen.generate()
+        generator = LewisShedler(g, 1, 0, size)
+        obs = generator.generate()
+        tsvd = TSVD(kernel=kernel, singular_values=lsw.singular_values,
+                    left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
+                    observations=obs, sample_size=size, max_size=100, tau=1)
 
-landweber = Landweber(kernel, 0, 1, 25000, obs, size, adjoint=True, tau=1)
-landweber.estimate()
+        tsvd.estimate()
+        tsvd.oracle(true)
+        solution = list(tsvd.solution(np.linspace(0, 1, 1000)))
+        parameter.append(tsvd.regularization_param)
+        oracle.append(tsvd.oracle_param)
+        solutions.append(solution)
+        residual.append(tsvd.residual)
+        tsvd.refresh()
 
-plt.rcParams['figure.figsize'] = 20, 10
-plt.ylim(-0.1, 0.5)
-plt.plot(f(cp.asnumpy(landweber.grid)), label='true')
-plt.plot(cp.asnumpy(landweber.solution), label='solution')
-plt.legend()
-plt.show()
+    results = pd.DataFrame({'Parameter': parameter, 'Oracle': oracle, 'Residual': residual, 'Solution': solutions})
+    results.to_csv('Simulation1.csv')

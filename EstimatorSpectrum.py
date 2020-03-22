@@ -48,6 +48,7 @@ class TSVD(EstimatorSpectrum):
         self.sigmas: np.ndarray = np.repeat([0], self.max_size)
         self.regularization_param: float = 0.
         self.oracle_param: Optional[float] = None
+        self.residual: float = 0.
         self.vs: list = []
         self.solution: Optional[Callable] = None
         self.client = Client(threads_per_worker=1, n_workers=cpu_count())
@@ -120,6 +121,7 @@ class TSVD(EstimatorSpectrum):
                             1)), np.square(self.q_fourier_coeffs))))
             self.regularization_param = alpha
             if residual <= np.sqrt(self.tau) * self.delta:
+                self.residual = residual
                 break
 
         def solution(x: Union[float, int]) -> np.ndarray:
@@ -131,9 +133,9 @@ class TSVD(EstimatorSpectrum):
 
     def refresh(self) -> None:
         """
-        Just to be consistent with general guidelines.
+        Close the dask client.
         """
-        pass
+        self.client.close()
 
     def oracle(self, true: Callable, patience: int = 3) -> None:
         """
@@ -215,6 +217,7 @@ class Tikhonov(EstimatorSpectrum):
         self.sigmas: np.ndarray = np.repeat([0], self.max_size)
         self.regularization_param: float = 0.
         self.oracle_param: Optional[float] = None
+        self.residual: float = 0.
         self.vs: list = []
         self.solution: Optional[Callable] = None
         self.client = Client(threads_per_worker=1, n_workers=cpu_count())
@@ -297,6 +300,7 @@ class Tikhonov(EstimatorSpectrum):
                             1)), np.square(self.q_fourier_coeffs))))
             self.regularization_param = alpha
             if residual <= np.sqrt(self.tau) * self.delta:
+                self.residual = residual
                 break
 
         def solution(x: Union[float, int]) -> np.ndarray:
@@ -309,9 +313,9 @@ class Tikhonov(EstimatorSpectrum):
 
     def refresh(self) -> None:
         """
-        Just to be consistent with general guidelines.
+        Close the dask client.
         """
-        pass
+        self.client.close()
 
     def oracle(self, true: Callable, patience: int = 3) -> None:
         """
@@ -395,6 +399,7 @@ class Landweber(EstimatorSpectrum):
         self.sigmas: np.ndarray = np.repeat([0], self.max_size)
         self.regularization_param: int = 0
         self.oracle_param: Optional[float] = None
+        self.residual: float = 0.
         self.vs: list = []
         self.solution: Optional[Callable] = None
         self.client = Client(threads_per_worker=1, n_workers=cpu_count())
@@ -482,6 +487,7 @@ class Landweber(EstimatorSpectrum):
                             1)), np.square(self.q_fourier_coeffs))))
             self.regularization_param = k
             if residual <= np.sqrt(self.tau) * self.delta:
+                self.residual = residual
                 break
 
         def solution(x: Union[float, int]) -> np.ndarray:
@@ -495,9 +501,9 @@ class Landweber(EstimatorSpectrum):
 
     def refresh(self) -> None:
         """
-        Just to be consistent with general guidelines.
+        Close the dask client.
         """
-        pass
+        self.client.close()
 
     def oracle(self, true: Callable, patience: int = 3) -> None:
         """
