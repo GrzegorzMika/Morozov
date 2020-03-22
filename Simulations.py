@@ -11,7 +11,7 @@ def true(x):
     return np.multiply(x ** 3, 1 - x) * 20
 
 
-size = 2000
+size = 10000
 
 
 def kernel(x, y):
@@ -24,7 +24,7 @@ if __name__ == '__main__':
     oracle_error = []
     solutions = []
     residual = []
-    for _ in tqdm(range(1000)):
+    for _ in tqdm(range(10)):
         lsw = LordWillisSpektor(transformed_measure=False)
         right = lsw.right_functions
 
@@ -35,7 +35,7 @@ if __name__ == '__main__':
             return 2 * size_n * (4 * np.power(x, 6) - 5 * np.power(x, 5) + x)
 
 
-        generator = LewisShedler(g, 1, 0, size)
+        generator = LewisShedler(intensity_function=g, upper=1, lower=0)
         obs = generator.generate()
         tsvd = TSVD(kernel=kernel, singular_values=lsw.singular_values,
                     left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
