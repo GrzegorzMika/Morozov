@@ -2,11 +2,10 @@ import warnings
 from abc import abstractmethod, ABCMeta
 from typing import Callable, Union, List, Any, Optional
 from warnings import warn
-from dask.distributed import Client
-from multiprocessing import cpu_count
+
 import numpy as np
 from scipy.integrate import quad
-from scipy.optimize import root, root_scalar
+from scipy.optimize import root_scalar
 
 from decorators import vectorize
 
@@ -203,8 +202,6 @@ class LSWW(Generator):
         self.r_sample: Optional[np.ndarray] = None
         self.z_sample: Optional[np.ndarray] = None
         self.kwargs: dict = kwargs
-
-        self.client = Client(threads_per_worker=1, n_workers=cpu_count())
 
         if not self.inverse_transformation and (
                 quad(self.pdf, 0, 1)[0] > 1.000001 or quad(self.pdf, 0, 1)[0] < 0.999999):
