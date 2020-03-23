@@ -24,19 +24,31 @@ if __name__ == '__main__':
     oracle_error = []
     solutions = []
     residual = []
-    for _ in tqdm(range(10)):
+    for _ in tqdm(range(1000)):
         lsw = LordWillisSpektor(transformed_measure=False)
         right = lsw.right_functions
 
-        size_n = np.random.poisson(lam=size, size=None)
+        try:
+            size_n = np.random.poisson(lam=size, size=None)
 
 
-        def g(x):
-            return 2 * size_n * (4 * np.power(x, 6) - 5 * np.power(x, 5) + x)
+            def g(x):
+                return 2 * size_n * (4 * np.power(x, 6) - 5 * np.power(x, 5) + x)
 
 
-        generator = LewisShedler(intensity_function=g, upper=1, lower=0)
-        obs = generator.generate()
+            generator = LewisShedler(intensity_function=g, upper=1, lower=0)
+            obs = generator.generate()
+        except ValueError:
+            size_n = np.random.poisson(lam=size, size=None)
+
+
+            def g(x):
+                return 2 * size_n * (4 * np.power(x, 6) - 5 * np.power(x, 5) + x)
+
+
+            generator = LewisShedler(intensity_function=g, upper=1, lower=0)
+            obs = generator.generate()
+
         tsvd = TSVD(kernel=kernel, singular_values=lsw.singular_values,
                     left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
                     observations=obs, sample_size=size, max_size=100, tau=1)
