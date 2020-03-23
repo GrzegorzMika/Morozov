@@ -30,7 +30,7 @@ def kernel(x, y):
 
 
 size = 10000
-replications = 100
+replications = 50
 
 if __name__ == '__main__':
     parameter_tsvd = []
@@ -44,39 +44,50 @@ if __name__ == '__main__':
     oracle_error_landweber = []
     solutions_landweber = []
     residual_landweber = []
+
+    lsw = LordWillisSpektor(transformed_measure=False)
+    lsww = LSWW(pdf=SMLA, sample_size=size)
+    obs = lsww.generate()
+    landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
+                          left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
+                          observations=obs, sample_size=size, max_size=100, tau=1)
     for _ in tqdm(range(replications)):
-        lsw = LordWillisSpektor(transformed_measure=False)
 
-        lsww = LSWW(pdf=SMLA, sample_size=size)
-        obs = lsww.generate()
+        try:
+            lsw = LordWillisSpektor(transformed_measure=False)
+            lsww = LSWW(pdf=SMLA, sample_size=size)
+            obs = lsww.generate()
+            landweber.observations = obs
+            landweber.singular_values = lsw.singular_values
+            landweber.left_singular_functions = lsw.left_functions
+            landweber.right_singular_functions = lsw.right_functions
+            # tsvd = TSVD(kernel=kernel, singular_values=lsw.singular_values,
+            #             left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
+            #             observations=obs, sample_size=size, max_size=100, tau=1)
+            #
+            # tsvd.estimate()
+            # tsvd.oracle(SMLA)
+            # solution = list(tsvd.solution(np.linspace(0, 1, 10000)))
+            # parameter_tsvd.append(tsvd.regularization_param)
+            # oracle_tsvd.append(tsvd.oracle_param)
+            # oracle_error_tsvd.append(tsvd.oracle_loss)
+            # solutions_tsvd.append(solution)
+            # residual_tsvd.append(tsvd.residual)
+            # tsvd.refresh()
 
-        # tsvd = TSVD(kernel=kernel, singular_values=lsw.singular_values,
-        #             left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
-        #             observations=obs, sample_size=size, max_size=100, tau=1)
-        #
-        # tsvd.estimate()
-        # tsvd.oracle(SMLA)
-        # solution = list(tsvd.solution(np.linspace(0, 1, 10000)))
-        # parameter_tsvd.append(tsvd.regularization_param)
-        # oracle_tsvd.append(tsvd.oracle_param)
-        # oracle_error_tsvd.append(tsvd.oracle_loss)
-        # solutions_tsvd.append(solution)
-        # residual_tsvd.append(tsvd.residual)
-        # tsvd.refresh()
+            landweber.estimate()
+            landweber.oracle(SMLA)
+            solution = list(landweber.solution(np.linspace(0, 1, 10000)))
+            parameter_landweber.append(landweber.regularization_param)
+            oracle_landweber.append(landweber.oracle_param)
+            oracle_error_landweber.append(landweber.oracle_loss)
+            solutions_landweber.append(solution)
+            residual_landweber.append(landweber.residual)
+            landweber.refresh()
+        except:
+            pass
 
-        landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
-                              left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
-                              observations=obs, sample_size=size, max_size=100, tau=1)
-        landweber.estimate()
-        landweber.oracle(SMLA)
-        solution = list(landweber.solution(np.linspace(0, 1, 10000)))
-        parameter_landweber.append(landweber.regularization_param)
-        oracle_landweber.append(landweber.oracle_param)
-        oracle_error_landweber.append(landweber.oracle_loss)
-        solutions_landweber.append(solution)
-        residual_landweber.append(landweber.residual)
-        landweber.refresh()
-
+    landweber.client.close()
     results_landweber = pd.DataFrame(
         {'Parameter': parameter_landweber, 'Oracle': oracle_landweber, 'Oracle_loss': oracle_error_landweber,
          'Residual': residual_landweber, 'Solution': solutions_landweber})
@@ -94,38 +105,50 @@ if __name__ == '__main__':
     oracle_error_landweber = []
     solutions_landweber = []
     residual_landweber = []
+
+    lsw = LordWillisSpektor(transformed_measure=False)
+    lsww = LSWW(pdf=SMLB, sample_size=size)
+    obs = lsww.generate()
+    landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
+                          left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
+                          observations=obs, sample_size=size, max_size=100, tau=1)
     for _ in tqdm(range(replications)):
-        lsw = LordWillisSpektor(transformed_measure=False)
 
-        lsww = LSWW(pdf=SMLB, sample_size=size)
-        obs = lsww.generate()
+        try:
+            lsw = LordWillisSpektor(transformed_measure=False)
+            lsww = LSWW(pdf=SMLB, sample_size=size)
+            obs = lsww.generate()
+            landweber.observations = obs
+            landweber.singular_values = lsw.singular_values
+            landweber.left_singular_functions = lsw.left_functions
+            landweber.right_singular_functions = lsw.right_functions
+            # tsvd = TSVD(kernel=kernel, singular_values=lsw.singular_values,
+            #             left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
+            #             observations=obs, sample_size=size, max_size=100, tau=1)
+            #
+            # tsvd.estimate()
+            # tsvd.oracle(SMLA)
+            # solution = list(tsvd.solution(np.linspace(0, 1, 10000)))
+            # parameter_tsvd.append(tsvd.regularization_param)
+            # oracle_tsvd.append(tsvd.oracle_param)
+            # oracle_error_tsvd.append(tsvd.oracle_loss)
+            # solutions_tsvd.append(solution)
+            # residual_tsvd.append(tsvd.residual)
+            # tsvd.refresh()
 
-        # tsvd = TSVD(kernel=kernel, singular_values=lsw.singular_values,
-        #             left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
-        #             observations=obs, sample_size=size, max_size=100, tau=1)
-        #
-        # tsvd.estimate()
-        # tsvd.oracle(SMLB)
-        # solution = list(tsvd.solution(np.linspace(0, 1, 10000)))
-        # parameter_tsvd.append(tsvd.regularization_param)
-        # oracle_tsvd.append(tsvd.oracle_param)
-        # oracle_error_tsvd.append(tsvd.oracle_loss)
-        # solutions_tsvd.append(solution)
-        # residual_tsvd.append(tsvd.residual)
-        # tsvd.refresh()
+            landweber.estimate()
+            landweber.oracle(SMLB)
+            solution = list(landweber.solution(np.linspace(0, 1, 10000)))
+            parameter_landweber.append(landweber.regularization_param)
+            oracle_landweber.append(landweber.oracle_param)
+            oracle_error_landweber.append(landweber.oracle_loss)
+            solutions_landweber.append(solution)
+            residual_landweber.append(landweber.residual)
+            landweber.refresh()
+        except:
+            pass
 
-        landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
-                              left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
-                              observations=obs, sample_size=size, max_size=100, tau=1)
-        landweber.estimate()
-        landweber.oracle(SMLA)
-        solution = list(landweber.solution(np.linspace(0, 1, 10000)))
-        parameter_landweber.append(landweber.regularization_param)
-        oracle_landweber.append(landweber.oracle_param)
-        oracle_error_landweber.append(landweber.oracle_loss)
-        solutions_landweber.append(solution)
-        residual_landweber.append(landweber.residual)
-        landweber.refresh()
+    landweber.client.close()
 
     results_landweber = pd.DataFrame(
         {'Parameter': parameter_landweber, 'Oracle': oracle_landweber, 'Oracle_loss': oracle_error_landweber,
@@ -144,39 +167,50 @@ if __name__ == '__main__':
     oracle_error_landweber = []
     solutions_landweber = []
     residual_landweber = []
+
+    lsw = LordWillisSpektor(transformed_measure=False)
+    lsww = LSWW(pdf=NM, sample_size=size)
+    obs = lsww.generate()
+    landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
+                          left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
+                          observations=obs, sample_size=size, max_size=100, tau=1)
     for _ in tqdm(range(replications)):
-        lsw = LordWillisSpektor(transformed_measure=False)
 
-        lsww = LSWW(pdf=NM, sample_size=size)
-        obs = lsww.generate()
+        try:
+            lsw = LordWillisSpektor(transformed_measure=False)
+            lsww = LSWW(pdf=NM, sample_size=size)
+            obs = lsww.generate()
+            landweber.observations = obs
+            landweber.singular_values = lsw.singular_values
+            landweber.left_singular_functions = lsw.left_functions
+            landweber.right_singular_functions = lsw.right_functions
+            # tsvd = TSVD(kernel=kernel, singular_values=lsw.singular_values,
+            #             left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
+            #             observations=obs, sample_size=size, max_size=100, tau=1)
+            #
+            # tsvd.estimate()
+            # tsvd.oracle(SMLA)
+            # solution = list(tsvd.solution(np.linspace(0, 1, 10000)))
+            # parameter_tsvd.append(tsvd.regularization_param)
+            # oracle_tsvd.append(tsvd.oracle_param)
+            # oracle_error_tsvd.append(tsvd.oracle_loss)
+            # solutions_tsvd.append(solution)
+            # residual_tsvd.append(tsvd.residual)
+            # tsvd.refresh()
 
-        # tsvd = TSVD(kernel=kernel, singular_values=lsw.singular_values,
-        #             left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
-        #             observations=obs, sample_size=size, max_size=100, tau=1)
-        #
-        # tsvd.estimate()
-        # tsvd.oracle(NM)
-        # solution = list(tsvd.solution(np.linspace(0, 1, 10000)))
-        # parameter_tsvd.append(tsvd.regularization_param)
-        # oracle_tsvd.append(tsvd.oracle_param)
-        # oracle_error_tsvd.append(tsvd.oracle_loss)
-        # solutions_tsvd.append(solution)
-        # residual_tsvd.append(tsvd.residual)
-        # tsvd.refresh()
+            landweber.estimate()
+            landweber.oracle(NM)
+            solution = list(landweber.solution(np.linspace(0, 1, 10000)))
+            parameter_landweber.append(landweber.regularization_param)
+            oracle_landweber.append(landweber.oracle_param)
+            oracle_error_landweber.append(landweber.oracle_loss)
+            solutions_landweber.append(solution)
+            residual_landweber.append(landweber.residual)
+            landweber.refresh()
+        except:
+            pass
 
-        landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
-                              left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
-                              observations=obs, sample_size=size, max_size=100, tau=1)
-        landweber.estimate()
-        landweber.oracle(SMLA)
-        solution = list(landweber.solution(np.linspace(0, 1, 10000)))
-        parameter_landweber.append(landweber.regularization_param)
-        oracle_landweber.append(landweber.oracle_param)
-        oracle_error_landweber.append(landweber.oracle_loss)
-        solutions_landweber.append(solution)
-        residual_landweber.append(landweber.residual)
-        landweber.refresh()
-
+    landweber.client.close()
     results_landweber = pd.DataFrame(
         {'Parameter': parameter_landweber, 'Oracle': oracle_landweber, 'Oracle_loss': oracle_error_landweber,
          'Residual': residual_landweber, 'Solution': solutions_landweber})
@@ -194,39 +228,50 @@ if __name__ == '__main__':
     oracle_error_landweber = []
     solutions_landweber = []
     residual_landweber = []
+
+    lsw = LordWillisSpektor(transformed_measure=False)
+    lsww = LSWW(pdf=BETA, sample_size=size)
+    obs = lsww.generate()
+    landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
+                          left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
+                          observations=obs, sample_size=size, max_size=100, tau=1)
     for _ in tqdm(range(replications)):
-        lsw = LordWillisSpektor(transformed_measure=False)
 
-        lsww = LSWW(pdf=BETA, sample_size=size)
-        obs = lsww.generate()
+        try:
+            lsw = LordWillisSpektor(transformed_measure=False)
+            lsww = LSWW(pdf=BETA, sample_size=size)
+            obs = lsww.generate()
+            landweber.observations = obs
+            landweber.singular_values = lsw.singular_values
+            landweber.left_singular_functions = lsw.left_functions
+            landweber.right_singular_functions = lsw.right_functions
+            # tsvd = TSVD(kernel=kernel, singular_values=lsw.singular_values,
+            #             left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
+            #             observations=obs, sample_size=size, max_size=100, tau=1)
+            #
+            # tsvd.estimate()
+            # tsvd.oracle(SMLA)
+            # solution = list(tsvd.solution(np.linspace(0, 1, 10000)))
+            # parameter_tsvd.append(tsvd.regularization_param)
+            # oracle_tsvd.append(tsvd.oracle_param)
+            # oracle_error_tsvd.append(tsvd.oracle_loss)
+            # solutions_tsvd.append(solution)
+            # residual_tsvd.append(tsvd.residual)
+            # tsvd.refresh()
 
-        # tsvd = TSVD(kernel=kernel, singular_values=lsw.singular_values,
-        #             left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
-        #             observations=obs, sample_size=size, max_size=100, tau=1)
-        #
-        # tsvd.estimate()
-        # tsvd.oracle(BETA)
-        # solution = list(tsvd.solution(np.linspace(0, 1, 10000)))
-        # parameter_tsvd.append(tsvd.regularization_param)
-        # oracle_tsvd.append(tsvd.oracle_param)
-        # oracle_error_tsvd.append(tsvd.oracle_loss)
-        # solutions_tsvd.append(solution)
-        # residual_tsvd.append(tsvd.residual)
-        # tsvd.refresh()
+            landweber.estimate()
+            landweber.oracle(BETA)
+            solution = list(landweber.solution(np.linspace(0, 1, 10000)))
+            parameter_landweber.append(landweber.regularization_param)
+            oracle_landweber.append(landweber.oracle_param)
+            oracle_error_landweber.append(landweber.oracle_loss)
+            solutions_landweber.append(solution)
+            residual_landweber.append(landweber.residual)
+            landweber.refresh()
+        except:
+            pass
 
-        landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
-                              left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
-                              observations=obs, sample_size=size, max_size=100, tau=1)
-        landweber.estimate()
-        landweber.oracle(SMLA)
-        solution = list(landweber.solution(np.linspace(0, 1, 10000)))
-        parameter_landweber.append(landweber.regularization_param)
-        oracle_landweber.append(landweber.oracle_param)
-        oracle_error_landweber.append(landweber.oracle_loss)
-        solutions_landweber.append(solution)
-        residual_landweber.append(landweber.residual)
-        landweber.refresh()
-
+    landweber.client.close()
     results_landweber = pd.DataFrame(
         {'Parameter': parameter_landweber, 'Oracle': oracle_landweber, 'Oracle_loss': oracle_error_landweber,
          'Residual': residual_landweber, 'Solution': solutions_landweber})

@@ -136,7 +136,14 @@ class TSVD(EstimatorSpectrum):
         """
         Close the dask client.
         """
-        self.client.close()
+        # self.client.close()
+        self.regularization_param: float = 0.
+        self.oracle_param: Optional[float] = None
+        self.oracle_loss: Optional[float] = None
+        self.residual: Optional[float] = None
+        self.vs: list = []
+        self.solution: Optional[Callable] = None
+        # self.client = Client(threads_per_worker=1, n_workers=cpu_count())
 
     @timer
     def oracle(self, true: Callable, patience: int = 3) -> None:
@@ -323,7 +330,14 @@ class Tikhonov(EstimatorSpectrum):
         """
         Close the dask client.
         """
-        self.client.close()
+        # self.client.close()
+        self.regularization_param: float = 0.
+        self.oracle_param: Optional[float] = None
+        self.oracle_loss: Optional[float] = None
+        self.residual: Optional[float] = None
+        self.vs: list = []
+        self.solution: Optional[Callable] = None
+        # self.client = Client(threads_per_worker=1, n_workers=cpu_count())
 
     @timer
     def oracle(self, true: Callable, patience: int = 3) -> None:
@@ -518,7 +532,14 @@ class Landweber(EstimatorSpectrum):
         """
         Close the dask client.
         """
-        self.client.close()
+        # self.client.close()
+        self.regularization_param: float = 0.
+        self.oracle_param: Optional[float] = None
+        self.oracle_loss: Optional[float] = None
+        self.residual: Optional[float] = None
+        self.vs: list = []
+        self.solution: Optional[Callable] = None
+        # self.client = Client(threads_per_worker=1, n_workers=cpu_count())
 
     @timer
     def oracle(self, true: Callable, patience: int = 3) -> None:
