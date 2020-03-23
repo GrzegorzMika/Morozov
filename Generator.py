@@ -2,10 +2,11 @@ import warnings
 from abc import abstractmethod, ABCMeta
 from typing import Callable, Union, List, Any, Optional
 from warnings import warn
-
+from dask.distributed import Client
+from multiprocessing import cpu_count
 import numpy as np
 from scipy.integrate import quad
-from scipy.optimize import root
+from scipy.optimize import root, root_scalar
 
 from decorators import vectorize
 
@@ -202,13 +203,17 @@ class LSWW(Generator):
         self.r_sample: Optional[np.ndarray] = None
         self.z_sample: Optional[np.ndarray] = None
         self.kwargs: dict = kwargs
-        if not self.inverse_transformation and (quad(self.pdf, 0, 1)[0] > 1.000001 or quad(self.pdf, 0, 1)[0] < 0.999999):
+
+        self.client = Client(threads_per_worker=1, n_workers=cpu_count())
+
+        if not self.inverse_transformation and (
+                quad(self.pdf, 0, 1)[0] > 1.000001 or quad(self.pdf, 0, 1)[0] < 0.999999):
             warn('Supplied pdf function is not a proper pdf function as it integrates to {}, running'
                  ' normalization'.format(quad(self.pdf, 0, 1)[0]), RuntimeWarning)
             normalize = quad(self.pdf, 0, 1)[0]
             pdf_tmp: Callable = self.pdf
             del self.pdf
-            self.pdf = lambda x: pdf_tmp(x)/normalize
+            self.pdf = lambda x: pdf_tmp(x) / normalize
 
     @vectorize(signature='(),()->()')
     def cdf(self, x: float) -> float:
@@ -218,43 +223,47 @@ class LSWW(Generator):
         :type x: float
         :return: value of the cumulative distribution function in point x
         """
-        return quad(self.pdf, 0, x)[0]
+        if x < 0:
+            return 0.
+        elif x > 1:
+            return 1.
+        else:
+            return quad(self.pdf, 0, x)[0]
 
     @staticmethod
     def __solve(f: Callable) -> float:
         """
         Find the argument solving the equation f(x) = 0.
-        :param f: Function for which the zero is found.
+        :param f: Function for which the zero is to be found.
         :type f: callable
-        :return: root (first found) of function f
+        :return: root of function f
         """
-        return root(f, 0.5).x[0]
+        return root_scalar(f, method='bisect', x0=0.5, bracket=[0, 1]).root
 
     def sample_r(self):
         """
         Sample the spheres radii according to the given probability density function.
         """
         if not self.inverse_transformation:
+            samples: list = []
             uniform: np.ndarray = np.random.uniform(0, 1, self.sample_size)
-            LHSs: List[Callable] = [lambda x, u=u: self.cdf(x) - u for u in uniform]
-            samples: List[float] = list(map(self.__solve, LHSs))
+            for seed in uniform:  # TODO: speed up
+                def shifted(x: float) -> float:
+                    return self.cdf(x) - seed
+                solution = self.__solve(shifted)
+                samples.append(solution)
         else:
             samples: np.ndarray = getattr(np.random, self.pdf)(size=self.sample_size, **self.kwargs)
         self.r_sample = np.array(samples)
 
     def sample_z(self):
         """
-        Sample the distance between ball center and the slicing plane according to the uniform distribution.
+        Sample the distance according to the Beta(2, 1) distribution as described in B. Ćmiel, "Estymatory falkowe w
+        problemach odwrotnych dla procesów Poissona", PhD thesis, AGH University of Science and Technology in Cracow, 2013.
         """
-        self.z_sample = np.random.uniform(0, 1, self.sample_size)
+        self.z_sample = np.random.beta(a=2, b=1, size=self.sample_size)
 
     def generate(self) -> np.ndarray:
-        """
-        Generate the points in the Lord-Spektor-Willis problem with a given probability density function. The algorithm is based on
-        the procedure described in 'NONPARAMETRIC CONFIDENCE BANDS IN WICKSELL’S PROBLEM', J.Wojdyła, Z.Szkutnik,
-        Statistica sinica 28 (2018), 93-113
-        :return: Numpy array containing the observations.
-        """
         self.sample_r()
         self.sample_z()
         ind: np.ndarray = np.less_equal(self.z_sample, self.r_sample)
