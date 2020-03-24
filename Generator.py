@@ -203,14 +203,14 @@ class LSWW(Generator):
         self.z_sample: Optional[np.ndarray] = None
         self.kwargs: dict = kwargs
 
-        if not self.inverse_transformation and (
-                quad(self.pdf, 0, 1)[0] > 1.000001 or quad(self.pdf, 0, 1)[0] < 0.999999):
-            warn('Supplied pdf function is not a proper pdf function as it integrates to {}, running'
-                 ' normalization'.format(quad(self.pdf, 0, 1)[0]), RuntimeWarning)
-            normalize = quad(self.pdf, 0, 1)[0]
-            pdf_tmp: Callable = self.pdf
-            del self.pdf
-            self.pdf = lambda x: pdf_tmp(x) / normalize
+        # if not self.inverse_transformation and (
+        #         quad(self.pdf, 0, 1)[0] > 1.000001 or quad(self.pdf, 0, 1)[0] < 0.999999):
+        #     warn('Supplied pdf function is not a proper pdf function as it integrates to {}, running'
+        #          ' normalization'.format(quad(self.pdf, 0, 1)[0]), RuntimeWarning)
+        #     normalize = quad(self.pdf, 0, 1)[0]
+        #     pdf_tmp: Callable = self.pdf
+        #     del self.pdf
+        #     self.pdf = lambda x: pdf_tmp(x) / normalize
 
     @vectorize(signature='(),()->()')
     def cdf(self, x: float) -> float:
@@ -220,12 +220,13 @@ class LSWW(Generator):
         :type x: float
         :return: value of the cumulative distribution function in point x
         """
-        if x < 0:
-            return 0.
-        elif x > 1:
-            return 1.
-        else:
-            return quad(self.pdf, 0, x)[0]
+        # if x < 0:
+        #     return 0.
+        # elif x > 1:
+        #     return 1.
+        # else:
+        #     return quad(self.pdf, 0, x)[0]
+        return quad(self.pdf, 0, x)[0]
 
     @staticmethod
     def __solve(f: Callable) -> float:
