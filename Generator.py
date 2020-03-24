@@ -220,13 +220,12 @@ class LSWW(Generator):
         :type x: float
         :return: value of the cumulative distribution function in point x
         """
-        # if x < 0:
-        #     return 0.
-        # elif x > 1:
-        #     return 1.
-        # else:
-        #     return quad(self.pdf, 0, x)[0]
-        return quad(self.pdf, 0, x)[0]
+        if x < 0:
+            return 0.
+        elif x > 1:
+            return 1.
+        else:
+            return quad(self.pdf, 0, x)[0]
 
     @staticmethod
     def __solve(f: Callable) -> float:
