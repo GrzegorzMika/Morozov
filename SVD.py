@@ -1,3 +1,4 @@
+import os
 from abc import ABCMeta, abstractmethod
 from typing import Callable
 
@@ -33,9 +34,15 @@ class LordWillisSpektor(SpectrumGenerator):
         """
         self.transformed_measure: bool = transformed_measure
         if not self.transformed_measure:
-            self.bessel_zeros = np.load('./bessel_zeros/bessel_zeros.npy')
+            self.bessel_zeros = np.load(self.find('bessel_zeros.npy', '/home'))
             self.bessel_zeros = self.bessel_zeros[self.bessel_zeros >= 0]
             self.As = np.divide(2, np.abs(jv(0.75, self.bessel_zeros)))
+
+    @staticmethod
+    def find(name, path):
+        for root, dirs, files in os.walk(path):
+            if name in files:
+                return os.path.join(root, name)
 
     @staticmethod
     def __right_transformed_measure(nu: int) -> Callable:
