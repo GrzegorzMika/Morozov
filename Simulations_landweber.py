@@ -38,12 +38,12 @@ if __name__ == '__main__':
     oracle_error_landweber = []
     solutions_landweber = []
     residual_landweber = []
-
+    lsww = LSWW(pdf=SMLA, sample_size=size, seed=123)
     for _ in tqdm(range(replications)):
 
         try:
             lsw = LordWillisSpektor(transformed_measure=False)
-            lsww = LSWW(pdf=SMLA, sample_size=size)
+
             obs = lsww.generate()
             landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
                                   left_singular_functions=lsw.left_functions,
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     results_landweber = pd.DataFrame(
         {'Parameter': parameter_landweber, 'Oracle': oracle_landweber, 'Oracle_loss': oracle_error_landweber,
          'Residual': residual_landweber, 'Solution': solutions_landweber})
-    results_landweber.to_csv('Simulation_SMLA_landweber_{}.csv'.format(replications))
+    results_landweber.to_csv('Simulation_SMLA_landweber_{}.csv'.format(size))
 
     ##############################################################################################################################
     parameter_landweber = []
@@ -73,12 +73,11 @@ if __name__ == '__main__':
     oracle_error_landweber = []
     solutions_landweber = []
     residual_landweber = []
-
+    lsww = LSWW(pdf=SMLB, sample_size=size, seed=123)
     for _ in tqdm(range(replications)):
 
         try:
             lsw = LordWillisSpektor(transformed_measure=False)
-            lsww = LSWW(pdf=SMLB, sample_size=size)
             obs = lsww.generate()
             landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
                                   left_singular_functions=lsw.left_functions,
@@ -100,7 +99,7 @@ if __name__ == '__main__':
     results_landweber = pd.DataFrame(
         {'Parameter': parameter_landweber, 'Oracle': oracle_landweber, 'Oracle_loss': oracle_error_landweber,
          'Residual': residual_landweber, 'Solution': solutions_landweber})
-    results_landweber.to_csv('Simulation_SMLB_landweber_{}.csv'.format(replications))
+    results_landweber.to_csv('Simulation_SMLB_landweber_{}.csv'.format(size))
 
     ##############################################################################################################################
     parameter_landweber = []
@@ -108,12 +107,11 @@ if __name__ == '__main__':
     oracle_error_landweber = []
     solutions_landweber = []
     residual_landweber = []
-
+    lsww = LSWW(pdf=NM, sample_size=size, seed=123)
     for _ in tqdm(range(replications)):
 
         try:
             lsw = LordWillisSpektor(transformed_measure=False)
-            lsww = LSWW(pdf=NM, sample_size=size)
             obs = lsww.generate()
             landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
                                   left_singular_functions=lsw.left_functions,
@@ -135,7 +133,7 @@ if __name__ == '__main__':
     results_landweber = pd.DataFrame(
         {'Parameter': parameter_landweber, 'Oracle': oracle_landweber, 'Oracle_loss': oracle_error_landweber,
          'Residual': residual_landweber, 'Solution': solutions_landweber})
-    results_landweber.to_csv('Simulation_NM_landweber_{}.csv'.format(replications))
+    results_landweber.to_csv('Simulation_NM_landweber_{}.csv'.format(size))
 
     ##############################################################################################################################
     parameter_landweber = []
@@ -143,12 +141,11 @@ if __name__ == '__main__':
     oracle_error_landweber = []
     solutions_landweber = []
     residual_landweber = []
-
+    lsww = LSWW(pdf=BETA, sample_size=size, seed=123)
     for _ in tqdm(range(replications)):
 
         try:
             lsw = LordWillisSpektor(transformed_measure=False)
-            lsww = LSWW(pdf=BETA, sample_size=size)
             obs = lsww.generate()
             landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
                                   left_singular_functions=lsw.left_functions,
@@ -170,4 +167,4 @@ if __name__ == '__main__':
     results_landweber = pd.DataFrame(
         {'Parameter': parameter_landweber, 'Oracle': oracle_landweber, 'Oracle_loss': oracle_error_landweber,
          'Residual': residual_landweber, 'Solution': solutions_landweber})
-    results_landweber.to_csv('Simulation_BETA_landweber_{}.csv'.format(replications))
+    results_landweber.to_csv('Simulation_BETA_landweber_{}.csv'.format(size))
