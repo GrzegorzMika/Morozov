@@ -20,7 +20,7 @@ def kernel(x, y):
 
 size = 10000
 replications = 50
-
+max_size = 50
 if __name__ == '__main__':
     parameter_tsvd = []
     oracle_tsvd = []
@@ -36,7 +36,7 @@ if __name__ == '__main__':
             obs = lsww.generate()
             tsvd = TSVD(kernel=kernel, singular_values=lsw.singular_values,
                         left_singular_functions=lsw.left_functions, right_singular_functions=lsw.right_functions,
-                        observations=obs, sample_size=size, max_size=100, tau=1)
+                        observations=obs, sample_size=size, max_size=max_size, tau=1)
 
             tsvd.estimate()
             tsvd.oracle(SMLA)

@@ -22,7 +22,7 @@ def kernel(x, y):
 
 size = 2000
 replications = 50
-
+max_size = 50
 if __name__ == '__main__':
     parameter_landweber = []
     oracle_landweber = []
@@ -39,7 +39,7 @@ if __name__ == '__main__':
             landweber = Landweber(kernel=kernel, singular_values=lsw.singular_values,
                                   left_singular_functions=lsw.left_functions,
                                   right_singular_functions=lsw.right_functions,
-                                  observations=obs, sample_size=size, max_size=100, tau=1)
+                                  observations=obs, sample_size=size, max_size=max_size, tau=1)
 
             landweber.estimate()
             landweber.oracle(BETA)
