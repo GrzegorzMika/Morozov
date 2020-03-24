@@ -2,6 +2,11 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+import sys
+from os import path
+
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+
 from EstimatorSpectrum import Landweber
 from Generator import LSWW
 from SVD import LordWillisSpektor
