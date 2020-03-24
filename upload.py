@@ -15,11 +15,11 @@ def find(name, path):
 storage_client = storage.Client.from_service_account_json(find('secretgc_ip.json', '/home'))
 bucket = storage_client.bucket('ip-free')
 
-files = os.listdir('.')
+files = os.listdir('./Simulations')
 files = [f for f in files if 'csv' in f]
 
 for file in tqdm(files):
-    data = pd.read_csv(file)
+    data = pd.read_csv(os.path.join('Simulations', file))
     name = file.split('.')[0]
     f = StringIO()
     data.to_csv(f, index_label=False)
