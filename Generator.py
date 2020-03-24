@@ -204,7 +204,7 @@ class LSWW(Generator):
         self.kwargs: dict = kwargs
 
         if not self.inverse_transformation and (
-                quad(self.pdf, 0, 1)[0] > 1.000001 or quad(self.pdf, 0, 1)[0] < 0.999999):
+                quad(self.pdf, 0, 1)[0] > 1.0001 or quad(self.pdf, 0, 1)[0] < 0.9999):
             warn('Supplied pdf function is not a proper pdf function as it integrates to {}, running'
                  ' normalization'.format(quad(self.pdf, 0, 1)[0]), RuntimeWarning)
             normalize = quad(self.pdf, 0, 1)[0]
