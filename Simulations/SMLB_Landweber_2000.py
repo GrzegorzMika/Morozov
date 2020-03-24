@@ -11,8 +11,8 @@ from SVD import LordWillisSpektor
 
 
 def SMLB(x):
-    return np.where(x>0 & x<1, 1.241 * np.multiply(np.power(2 * x - x ** 2, -1.5),
-                               np.exp(1.21 * (1 - np.power(2 * x - x ** 2, -1)))), 0)
+    return np.where((x > 0.000001) & (x < 0.99999), 1.241 * np.multiply(np.power(2 * x - x ** 2, -1.5),
+                                                       np.exp(1.21 * (1 - np.power(2 * x - x ** 2, -1)))), 0)
 
 
 def kernel(x, y):
