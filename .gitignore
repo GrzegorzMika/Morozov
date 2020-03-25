@@ -8,3 +8,4 @@ test/.pytest_cache
 dask-worker-space/*
 *.ipynb
 secretgc_ip.json
+*.csv
