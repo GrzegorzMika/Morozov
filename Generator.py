@@ -176,28 +176,29 @@ class LewisShedler(Generator):
         plt.clf()
 
 
-class LSWW(Generator):
+class LSW(Generator):
     def __init__(self, pdf: Union[Callable[[Union[float, np.ndarray]], Union[float, np.ndarray]], str],
                  sample_size: int, seed: float = None, **kwargs):
         """
-        Generator of observations in Lord-Spector-Willis and Wicksell problem with an arbitrary probability density function.
+        Generator of observations in Lord-Spektor-Willis problem with an arbitrary probability density function on
+        interval [0, 1].
         :param pdf: Probability density function of the squared radii. It can be specified as a callable and then
         sampling is performed by using the inverse sampling method or as a string specifying the distribution from
-        numpy.random module. A correct pdf is expected, in case the integral is different than 1 a warining is raised
+        numpy.random module. A correct pdf is expected, in case the integral is different than 1 a warning is raised
         and a normalization is performed.
         :type pdf: callable or string
         :param sample_size: size of the experiment sample generated as a Poisson random variable with intensity sample size
         :type sample_size: int
         :param seed: seed value for reproducibility
         :type seed: float (default: None)
-        :param kwargs: additional keyword arguments numpy random generator
+        :param kwargs: additional keyword arguments for numpy random generator
         """
         super().__init__()
         np.random.seed(seed)
         assert callable(pdf) | isinstance(pdf, str), 'Probability density function must be string or callable'
         self.pdf = pdf
         assert isinstance(sample_size, int), 'Sample size has to be specified as an integer'
-        self.sample_size = np.random.poisson(lam=sample_size, size=1)
+        self.sample_size: int = np.random.poisson(lam=sample_size, size=1)
         self.inverse_transformation: bool = isinstance(pdf, str)
         self.r_sample: Optional[np.ndarray] = None
         self.z_sample: Optional[np.ndarray] = None
@@ -211,14 +212,15 @@ class LSWW(Generator):
             pdf_tmp: Callable = self.pdf
             del self.pdf
             self.pdf = lambda x: pdf_tmp(x) / normalize
+            self.pdf = np.vectorize(self.pdf)
 
     @vectorize(signature='(),()->()')
     def cdf(self, x: float) -> float:
         """
         Calculate the value of cumulative distribution function for given probability density function in given point.
-        :param x: point in which the value of the cumulative distribution function is calculated
+        :param x: Point in which the value of the cumulative distribution function is calculated.
         :type x: float
-        :return: value of the cumulative distribution function in point x
+        :return: Value of the cumulative distribution function in point x.
         """
         if x < 0:
             return 0.
@@ -230,14 +232,14 @@ class LSWW(Generator):
     @staticmethod
     def __solve(f: Callable) -> float:
         """
-        Find the argument solving the equation f(x) = 0.
+        Find the argument solving the equation f(x) = 0 in interval [0, 1].
         :param f: Function for which the zero is to be found.
         :type f: callable
-        :return: root of function f
+        :return: Root of function f.
         """
         return root_scalar(f, method='bisect', x0=0.5, bracket=[0, 1]).root
 
-    def sample_r(self):
+    def sample_r(self) -> None:
         """
         Sample the spheres radii according to the given probability density function.
         """
@@ -253,7 +255,7 @@ class LSWW(Generator):
             samples: np.ndarray = getattr(np.random, self.pdf)(size=self.sample_size, **self.kwargs)
         self.r_sample = np.array(samples)
 
-    def sample_z(self):
+    def sample_z(self) -> None:
         """
         Sample the distance according to the Beta(2, 1) distribution as described in B. Ćmiel, "Estymatory falkowe w
         problemach odwrotnych dla procesów Poissona", PhD thesis, AGH University of Science and Technology in Cracow, 2013.

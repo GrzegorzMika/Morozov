@@ -1,8 +1,17 @@
 import os
+import sys
 from pytest import raises
 import numpy as np
 from numpy.testing import assert_equal
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import Generator
+
+
+def find(name, path):
+    for root, dirs, files in os.walk(path):
+        if name in files:
+            return os.path.join(root, name)
 
 
 def lam(t):
@@ -46,7 +55,7 @@ class TestGeneratorInstance:
 
 
 observations = generator.generate()
-observations_test = np.load(os.path.join('test_files', 'test_result.npy'))
+observations_test = np.load(find('test_result.npy', '/home'))
 
 
 class TestObservationns:

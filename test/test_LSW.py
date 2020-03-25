@@ -2,12 +2,21 @@ import os
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 from pytest import raises, warns
+import sys
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import Generator
 
 
+def find(name, path):
+    for root, dirs, files in os.walk(path):
+        if name in files:
+            return os.path.join(root, name)
+
+
 def pdf(x):
-    return np.where(x < 0.5, 1, x)/0.875
+    return np.where(x < 0.5, 1, x) / 0.875
+
 
 def pdf_nonnormalized_small(x):
     return np.exp(-x ** 2)
@@ -17,7 +26,7 @@ def pdf_nonnormalized_big(x):
     return np.exp(-x ** 2) * 100
 
 
-generator = Generator.LSWW(pdf='beta', sample_size=100, seed=1, a=1, b=1)
+generator = Generator.LSW(pdf='beta', sample_size=100, seed=1, a=1, b=1)
 
 
 class TestGeneratorString:
@@ -65,9 +74,9 @@ class TestGeneratorString:
         assert callable(generator.cdf)
 
     def test_solve(self):
-        assert hasattr(generator, '_LSWW__solve')
-        assert callable(generator._LSWW__solve)
-        assert generator._LSWW__solve(lambda x: x - 1) == 1
+        assert hasattr(generator, '_LSW__solve')
+        assert callable(generator._LSW__solve)
+        assert generator._LSW__solve(lambda x: x - 1) == 1
 
 
 class TestObservationnsString:
@@ -75,20 +84,21 @@ class TestObservationnsString:
         assert hasattr(generator, 'sample_r')
         assert callable(generator.sample_r)
         generator.sample_r()
-        assert_equal(generator.r_sample, np.load(os.path.join('test_files', 'r_sample.npy')))
+        assert_equal(generator.r_sample, np.load(find('r_sample.npy', '/home')))
 
     def test_sample_z(self):
         assert hasattr(generator, 'sample_z')
         assert callable(generator.sample_z)
         generator.sample_z()
-        assert_equal(generator.z_sample, np.load(os.path.join('test_files', 'z_sample.npy')))
+        assert_equal(generator.z_sample, np.load(find('z_sample.npy', '/home')))
 
     def test_observations(self):
         observations = generator.generate()
-        assert_equal(observations, np.load(os.path.join('test_files', 'lsww_sample.npy')))
+        assert_equal(observations, np.load(find('lsw_sample.npy', '/home')))
 
 
-generator_custom = Generator.LSWW(pdf=pdf, sample_size=100, seed=1)
+generator_custom = Generator.LSW(pdf=pdf, sample_size=100, seed=1)
+
 
 class TestGeneratorCustom:
     def test_instance(self):
@@ -128,44 +138,44 @@ class TestGeneratorCustom:
         assert_almost_equal(generator_custom.cdf(1), np.array([1]), decimal=8)
 
     def test_solve(self):
-        assert hasattr(generator_custom, '_LSWW__solve')
-        assert callable(generator_custom._LSWW__solve)
-        assert generator_custom._LSWW__solve(lambda x: x - 1) == 1
+        assert hasattr(generator_custom, '_LSW__solve')
+        assert callable(generator_custom._LSW__solve)
+        assert generator_custom._LSW__solve(lambda x: x - 1) == 1
 
 
-class TestObservationnsCustom:
+class TestObservationsCustom:
     def test_sample_r(self):
         assert hasattr(generator_custom, 'sample_r')
         assert callable(generator_custom.sample_r)
         generator_custom.sample_r()
-        assert_equal(generator_custom.r_sample, np.load(os.path.join('test_files', 'r_sample_custom.npy')))
+        assert_equal(generator_custom.r_sample, np.load(find('r_sample_custom.npy', '/home')))
 
     def test_sample_z(self):
         assert hasattr(generator_custom, 'sample_z')
         assert callable(generator_custom.sample_z)
         generator_custom.sample_z()
-        assert_equal(generator_custom.z_sample, np.load(os.path.join('test_files', 'z_sample_custom.npy')))
+        assert_equal(generator_custom.z_sample, np.load(find('z_sample_custom.npy', '/home')))
 
     def test_observations(self):
         observations = generator_custom.generate()
-        assert_equal(observations, np.load(os.path.join('test_files', 'lsww_sample_custom.npy')))
+        assert_equal(observations, np.load(find('lsw_sample_custom.npy', '/home')))
 
 
 class TestExceptions:
     def test_pdf(self):
         with raises(AssertionError):
-            Generator.LSWW(pdf=1, sample_size=100, seed=1)
+            Generator.LSW(pdf=1, sample_size=100, seed=1)
         with raises(AssertionError):
-            Generator.LSWW(pdf=True, sample_size=100, seed=1)
+            Generator.LSW(pdf=True, sample_size=100, seed=1)
 
     def test_sample_size(self):
         with raises(AssertionError):
-            Generator.LSWW(pdf=pdf, sample_size='a', seed=1)
+            Generator.LSW(pdf=pdf, sample_size='a', seed=1)
         with raises(AssertionError):
-            Generator.LSWW(pdf=pdf, sample_size=100., seed=1)
+            Generator.LSW(pdf=pdf, sample_size=100., seed=1)
 
     def test_normalization(self):
         with warns(RuntimeWarning):
-            Generator.LSWW(pdf=pdf_nonnormalized_big, sample_size=100, seed=1)
+            Generator.LSW(pdf=pdf_nonnormalized_big, sample_size=100, seed=1)
         with warns(RuntimeWarning):
-            Generator.LSWW(pdf=pdf_nonnormalized_small, sample_size=100, seed=1)
+            Generator.LSW(pdf=pdf_nonnormalized_small, sample_size=100, seed=1)
