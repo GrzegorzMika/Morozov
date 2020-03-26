@@ -48,7 +48,7 @@ class TSVD(EstimatorSpectrum):
         self.lower: Union[float, int] = lower
         self.upper: Union[float, int] = upper
         self.tau: Union[float, int] = kwargs.get('tau', 1)
-        if not isinstance(self.tau, float) or not isinstance(self.tau, int):
+        if not isinstance(self.tau, float) and not isinstance(self.tau, int):
             warn('Wrong tau has been specified! Falling back from {} to default value 1'.format(self.tau))
             self.tau = 1
         self.max_size: int = kwargs.get('max_size', 100)
@@ -234,7 +234,7 @@ class Tikhonov(EstimatorSpectrum):
         self.lower: Union[float, int] = lower
         self.upper: Union[float, int] = upper
         self.tau: Union[float, int] = kwargs.get('tau', 1)
-        if not isinstance(self.tau, float) or not isinstance(self.tau, int):
+        if not isinstance(self.tau, float) and not isinstance(self.tau, int):
             warn('Wrong tau has been specified! Falling back from {} to default value 1'.format(self.tau))
             self.tau = 1
         self.max_size: int = kwargs.get('max_size', 100)
@@ -437,7 +437,7 @@ class Landweber(EstimatorSpectrum):
         self.lower: Union[float, int] = lower
         self.upper: Union[float, int] = upper
         self.tau: Union[float, int] = kwargs.get('tau', 1)
-        if not isinstance(self.tau, float) or not isinstance(self.tau, int):
+        if not isinstance(self.tau, float) and not isinstance(self.tau, int):
             warn('Wrong tau has been specified! Falling back from {} to default value 1'.format(self.tau))
             self.tau = 1
         self.max_size: int = kwargs.get('max_size', 100)
@@ -449,8 +449,8 @@ class Landweber(EstimatorSpectrum):
             warn('Wrong max_iter has been specified! Falling back from {} to default value 100'.format(self.max_iter))
             self.max_iter = 100
         self.__relaxation: float = kwargs.get('relaxation', 0.8)
-        if not isinstance(self.__relaxation, float) or not isinstance(self.__relaxation, int):
-            warn('Wrong tau has been specified! Falling back from {} to default value 0.8'.format(self.__relaxation))
+        if not isinstance(self.__relaxation, float) and not isinstance(self.__relaxation, int):
+            warn('Wrong relaxation has been specified! Falling back from {} to default value 0.8'.format(self.__relaxation))
             self.__relaxation = 0.8
         self.q_fourier_coeffs: np.ndarray = np.repeat([0.], self.max_size)
         self.sigmas: np.ndarray = np.repeat([0.], self.max_size)
