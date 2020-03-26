@@ -4,7 +4,6 @@ from typing import Callable, Union, List, Any, Optional, Iterable
 from warnings import warn
 
 import numpy as np
-from dask.distributed import Client
 from scipy.integrate import quad
 from scipy.optimize import root_scalar
 
