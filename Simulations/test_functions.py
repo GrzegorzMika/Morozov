@@ -18,3 +18,7 @@ def SMLB(x):
     return (np.where((x > 0.00000000001), 1.241 * np.multiply(np.power(2 * x - x ** 2, -1.5),
                                                               np.exp(1.21 * (1 - np.power(2 * x - x ** 2, -1)))),
                      0)) / 0.9998251040790366
+
+
+def kernel(x, y):
+    return np.where(x >= y, 2 * y, 0)
