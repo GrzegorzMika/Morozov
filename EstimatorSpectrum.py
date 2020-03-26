@@ -49,10 +49,14 @@ class TSVD(EstimatorSpectrum):
         self.regularization_param: float = 0.
         self.oracle_param: Optional[float] = None
         self.oracle_loss: Optional[float] = None
+        self.oracle_solution: Optional[np.ndarray] = None
         self.residual: Optional[float] = None
         self.vs: list = []
         self.solution: Optional[Callable] = None
-        self.client = Client(threads_per_worker=1, n_workers=cpu_count())
+        njobs = kwargs.get('njobs')
+        if njobs is None or njobs < 0:
+            njobs = cpu_count()
+        self.client = Client(threads_per_worker=1, n_workers=njobs)
 
     @timer
     def __find_fourier_coeffs(self) -> None:
@@ -91,7 +95,7 @@ class TSVD(EstimatorSpectrum):
 
     def __singular_functions(self) -> None:
         """
-        Collect a max_size right singular functions.
+        Collect a max_size right singular functions.    
         """
         self.vs = [next(self.right_singular_functions) for _ in range(self.max_size)]
 
@@ -133,17 +137,7 @@ class TSVD(EstimatorSpectrum):
         self.solution = np.vectorize(solution)
 
     def refresh(self) -> None:
-        """
-        Close the dask client.
-        """
-        # self.client.close()
-        self.regularization_param: float = 0.
-        self.oracle_param: Optional[float] = None
-        self.oracle_loss: Optional[float] = None
-        self.residual: Optional[float] = None
-        self.vs: list = []
-        self.solution: Optional[Callable] = None
-        # self.client = Client(threads_per_worker=1, n_workers=cpu_count())
+        pass
 
     @timer
     def oracle(self, true: Callable, patience: int = 3) -> None:
@@ -157,6 +151,7 @@ class TSVD(EstimatorSpectrum):
         parameters = []
         best_loss = np.inf
         counter = 0
+        oracle_solutions = []
 
         def residual(function):
             return lambda x: np.square(true(x) - function(x))
@@ -170,7 +165,7 @@ class TSVD(EstimatorSpectrum):
                                             self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
 
             solution = np.vectorize(solution)
-
+            oracle_solutions.append(solution(np.linspace(0, 1, 10000)))
             res = residual(solution)
             loss = quad(res, self.lower, self.upper, limit=10000)[0]
             losses.append(loss)
@@ -184,6 +179,7 @@ class TSVD(EstimatorSpectrum):
         res = residual(function=self.solution)
         self.oracle_param = parameters[losses.index(min(losses))]
         self.oracle_loss = min(losses)
+        self.oracle_solution = oracle_solutions[losses.index(min(losses))]
         self.residual = quad(res, self.lower, self.upper, limit=10000)[0]
 
 
@@ -231,10 +227,14 @@ class Tikhonov(EstimatorSpectrum):
         self.regularization_param: float = 0.
         self.oracle_param: Optional[float] = None
         self.oracle_loss: Optional[float] = None
+        self.oracle_solution: Optional[np.ndarray] = None
         self.residual: Optional[float] = None
         self.vs: list = []
         self.solution: Optional[Callable] = None
-        self.client = Client(threads_per_worker=1, n_workers=cpu_count())
+        njobs = kwargs.get('njobs')
+        if njobs is None or njobs < 0:
+            njobs = cpu_count()
+        self.client = Client(threads_per_worker=1, n_workers=njobs)
 
     @property
     def order(self) -> int:
@@ -327,17 +327,7 @@ class Tikhonov(EstimatorSpectrum):
         self.solution = np.vectorize(solution)
 
     def refresh(self) -> None:
-        """
-        Close the dask client.
-        """
-        # self.client.close()
-        self.regularization_param: float = 0.
-        self.oracle_param: Optional[float] = None
-        self.oracle_loss: Optional[float] = None
-        self.residual: Optional[float] = None
-        self.vs: list = []
-        self.solution: Optional[Callable] = None
-        # self.client = Client(threads_per_worker=1, n_workers=cpu_count())
+        pass
 
     @timer
     def oracle(self, true: Callable, patience: int = 3) -> None:
@@ -351,6 +341,7 @@ class Tikhonov(EstimatorSpectrum):
         parameters = []
         best_loss = np.inf
         counter = 0
+        oracle_solutions = []
 
         def residual(solution):
             return lambda x: np.square(true(x) - solution(x))
@@ -364,7 +355,7 @@ class Tikhonov(EstimatorSpectrum):
                                             self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
 
             solution = np.vectorize(solution)
-
+            oracle_solutions.append(solution(np.linspace(0, 1, 10000)))
             res = residual(solution)
             loss = quad(res, self.lower, self.upper, limit=10000)[0]
             losses.append(loss)
@@ -378,6 +369,7 @@ class Tikhonov(EstimatorSpectrum):
         res = residual(solution=self.solution)
         self.oracle_param = parameters[losses.index(min(losses))]
         self.oracle_loss = min(losses)
+        self.oracle_solution = oracle_solutions[losses.index(min(losses))]
         self.residual = quad(res, self.lower, self.upper, limit=10000)[0]
 
 
@@ -427,10 +419,14 @@ class Landweber(EstimatorSpectrum):
         self.regularization_param: int = 0
         self.oracle_param: Optional[float] = None
         self.oracle_loss: Optional[float] = None
+        self.oracle_solution: Optional[np.ndarray] = None
         self.residual: Optional[float] = None
         self.vs: list = []
         self.solution: Optional[Callable] = None
-        self.client = Client(threads_per_worker=1, n_workers=cpu_count())
+        njobs = kwargs.get('njobs')
+        if njobs is None or njobs < 0:
+            njobs = cpu_count()
+        self.client = Client(threads_per_worker=1, n_workers=njobs)
 
     @property
     def relaxation(self) -> float:
@@ -529,17 +525,7 @@ class Landweber(EstimatorSpectrum):
         self.solution = np.vectorize(solution)
 
     def refresh(self) -> None:
-        """
-        Close the dask client.
-        """
-        # self.client.close()
-        self.regularization_param: float = 0.
-        self.oracle_param: Optional[float] = None
-        self.oracle_loss: Optional[float] = None
-        self.residual: Optional[float] = None
-        self.vs: list = []
-        self.solution: Optional[Callable] = None
-        # self.client = Client(threads_per_worker=1, n_workers=cpu_count())
+        pass
 
     @timer
     def oracle(self, true: Callable, patience: int = 3) -> None:
@@ -553,6 +539,7 @@ class Landweber(EstimatorSpectrum):
         parameters = []
         best_loss = np.inf
         counter = 0
+        oracle_solutions = []
 
         def residual(solution):
             return lambda x: np.square(true(x) - solution(x))
@@ -566,7 +553,7 @@ class Landweber(EstimatorSpectrum):
                                             self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
 
             solution = np.vectorize(solution)
-
+            oracle_solutions.append(solution(np.linspace(0, 1, 10000)))
             res = residual(solution)
             loss = quad(res, self.lower, self.upper, limit=10000)[0]
             losses.append(loss)
@@ -580,4 +567,5 @@ class Landweber(EstimatorSpectrum):
         res = residual(solution=self.solution)
         self.oracle_param = parameters[losses.index(min(losses))]
         self.oracle_loss = min(losses)
+        self.oracle_solution = oracle_solutions[losses.index(min(losses))]
         self.residual = quad(res, self.lower, self.upper, limit=10000)[0]

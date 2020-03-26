@@ -17,11 +17,11 @@ int main()
   // using namespace boost::lambda;
   using namespace boost::multiprecision;
   using boost::multiprecision::cpp_dec_float_50;
-  unsigned int n_roots = 10000000U;
+  unsigned int n_roots = 10000U;
   std::vector<cpp_dec_float_50> roots;
   boost::math::cyl_bessel_j_zero(-0.25, 1, n_roots, std::back_inserter(roots));
   
-  path p{"bessel_zeros.txt"};
+  path p{"bessel_zeros_short.txt"};
   ofstream ofs{p};
   ofs.precision(std::numeric_limits<cpp_dec_float_50>::digits10);
   std::copy(roots.begin(),
