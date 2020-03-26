@@ -10,7 +10,7 @@ from EstimatorSpectrum import TSVD
 from Generator import LSW
 from SVD import LordWillisSpektor
 
-replications = 1
+replications = 10
 size = [2000, 10000]
 max_size = 10
 taus = [1., 1.1, 1.2, 1.5, 2.]

@@ -10,7 +10,7 @@ from EstimatorSpectrum import TSVD
 from Generator import LSW
 from SVD import LordWillisSpektor
 
-replications = 1
+replications = 10
 size = [2000, 10000, 100000, 1000000]
 max_size = 10
 functions = [BETA, NM, SMLA, SMLB]

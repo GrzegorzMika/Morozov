@@ -10,7 +10,7 @@ from EstimatorSpectrum import Landweber
 from Generator import LSW
 from SVD import LordWillisSpektor
 
-replications = 1
+replications = 10
 size = [2000, 10000]
 max_size = 50
 max_iter = 30
