@@ -1,6 +1,7 @@
 from time import time
 from typing import Callable, Union, Tuple
 from warnings import warn
+from joblib import Memory
 
 import cupy as cp
 import numpy as np
@@ -10,6 +11,14 @@ from numpy import linalg as np_linalg
 from GeneralEstimator import EstimatorDiscretize
 from Operator import Operator
 from decorators import timer
+
+location = './cachedir'
+memory = Memory(location, verbose=0, bytes_limit=1024 * 1024 * 1024)
+
+
+@memory.cache
+def numpy_svd(A_cpu: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    return np_linalg.svd(A_cpu, full_matrices=True, compute_uv=True, hermitian=True)
 
 
 class Landweber(EstimatorDiscretize, Operator):
@@ -438,7 +447,6 @@ class TSVD(EstimatorDiscretize, Operator):
         self.__V: cp.ndarray = cp.zeros((self.grid_size, self.grid_size))
         self.__D: cp.ndarray = cp.zeros((self.grid_size,))
         self.__U, self.__D, self.__V = self.decomposition(self.KHK, self.grid_size)
-        # self.smoothed_q_estimator = cp.matmul(self.__U.T, self.q_estimator)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
 
     @staticmethod
@@ -461,7 +469,7 @@ class TSVD(EstimatorDiscretize, Operator):
         __U: np.ndarray = np.zeros((size, size))
         __D: np.ndarray = np.zeros((size,))
         __V: np.ndarray = np.zeros((size, size))
-        __U, __D, __V = np_linalg.svd(A_cpu, full_matrices=True, compute_uv=True, hermitian=True)
+        __U, __D, __V = numpy_svd(A_cpu=A_cpu)
         return cp.asarray(__U), cp.asarray(np.flip(np.sort(__D))), cp.asarray(__V)
 
     @property

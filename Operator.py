@@ -155,8 +155,10 @@ class Operator(Quadrature):
         :return: Numpy ndarray containing the nth column of the adjoint operator approximation.
         """
         kernel = self.kernel
+
         def adjoint_kernel(x, y):
             return kernel(y, x)
+
         return adjoint_kernel(t, self.__grid) * self.quadrature(t)
 
     @timer

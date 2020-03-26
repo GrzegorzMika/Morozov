@@ -3,6 +3,8 @@ from typing import Callable, Union, Optional, List
 # from warnings import warn
 
 # import cupy as cp
+from warnings import warn
+
 import numpy as np
 from scipy.integrate import quad
 
@@ -133,10 +135,24 @@ class EstimatorAbstract(metaclass=ABCMeta):
 class EstimatorSpectrum(EstimatorAbstract):
     def __init__(self, kernel: Callable, observations: np.ndarray, sample_size: int,
                  lower: Union[float, int] = 0, upper: Union[float, int] = 1):
-        self.kernel: Callable = kernel
+        assert isinstance(kernel, Callable), 'Kernel function must be callable'
+        try:
+            kernel(np.array([1, 2]), np.array([1, 2]))
+            self.kernel: Callable = kernel
+        except ValueError:
+            warn('Force vectorization of kernel')
+            self.kernel: Callable = np.vectorize(kernel)
+        assert isinstance(lower, float) | isinstance(lower,
+                                                     int), 'Lower bound for integration interval must be a number, but ' \
+                                                           'was {} provided'.format(lower)
         self.lower: Union[float, int] = lower
+        assert isinstance(upper, float) | isinstance(upper,
+                                                     int), 'Upper bound for integration interval must be a number, but' \
+                                                           ' was {} provided'.format(upper)
         self.upper: Union[float, int] = upper
+        assert isinstance(observations, np.ndarray), 'Please provide the observations in a form of numpy array'
         self.__observations: np.ndarray = observations
+        assert isinstance(sample_size, int), 'Sample size must be an integer, but was {} provided'.format(sample_size)
         self.sample_size: int = sample_size
         self.q_estimator: Optional[Callable] = None
         self.__w_function: Optional[Callable] = None

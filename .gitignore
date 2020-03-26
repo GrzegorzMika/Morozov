@@ -9,3 +9,5 @@ dask-worker-space/*
 *.ipynb
 secretgc_ip.json
 *.csv
+./cachedir
+/cachedir/

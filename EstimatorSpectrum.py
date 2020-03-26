@@ -1,5 +1,7 @@
 from multiprocessing import cpu_count
 from typing import Union, Callable, Optional, Generator, Iterable
+from warnings import warn
+
 import numpy as np
 from dask.distributed import Client
 from numba import njit
@@ -35,17 +37,26 @@ class TSVD(EstimatorSpectrum):
         """
         EstimatorSpectrum.__init__(self, kernel, observations, sample_size, lower, upper)
         self.kernel: Callable = kernel
+        assert isinstance(singular_values, Generator), 'Please provide the singular values as generator'
         self.singular_values: Generator = singular_values
+        assert isinstance(left_singular_functions, Generator), 'Please provide the left singular functions as generator'
         self.left_singular_functions: Generator = left_singular_functions
+        assert isinstance(right_singular_functions, Generator), 'Please provide the right singular functions as generator'
         self.right_singular_functions: Generator = right_singular_functions
         self.observations: np.ndarray = observations
         self.sample_size: int = sample_size
         self.lower: Union[float, int] = lower
         self.upper: Union[float, int] = upper
         self.tau: Union[float, int] = kwargs.get('tau', 1)
+        if not isinstance(self.tau, float) or not isinstance(self.tau, int):
+            warn('Wrong tau has been specified! Falling back from {} to default value 1'.format(self.tau))
+            self.tau = 1
         self.max_size: int = kwargs.get('max_size', 100)
-        self.q_fourier_coeffs: np.ndarray = np.repeat([0], self.max_size)
-        self.sigmas: np.ndarray = np.repeat([0], self.max_size)
+        if not isinstance(self.max_size, int):
+            warn('Wrong max_size has been specified! Falling back from {} to default value 100'.format(self.max_size))
+            self.max_size = 100
+        self.q_fourier_coeffs: np.ndarray = np.repeat([0.], self.max_size)
+        self.sigmas: np.ndarray = np.repeat([0.], self.max_size)
         self.regularization_param: float = 0.
         self.oracle_param: Optional[float] = None
         self.oracle_loss: Optional[float] = None
@@ -54,7 +65,7 @@ class TSVD(EstimatorSpectrum):
         self.vs: list = []
         self.solution: Optional[Callable] = None
         njobs = kwargs.get('njobs')
-        if njobs is None or njobs < 0:
+        if njobs is None or njobs < 0 or not isinstance(njobs, int):
             njobs = cpu_count()
         self.client = Client(threads_per_worker=1, n_workers=njobs)
 
@@ -212,18 +223,30 @@ class Tikhonov(EstimatorSpectrum):
         """
         EstimatorSpectrum.__init__(self, kernel, observations, sample_size, lower, upper)
         self.kernel: Callable = kernel
+        assert isinstance(singular_values, Generator), 'Please provide the singular values as generator'
         self.singular_values: Generator = singular_values
+        assert isinstance(left_singular_functions, Generator), 'Please provide the left singular functions as generator'
         self.left_singular_functions: Generator = left_singular_functions
+        assert isinstance(right_singular_functions, Generator), 'Please provide the right singular functions as generator'
         self.right_singular_functions: Generator = right_singular_functions
         self.observations: np.ndarray = observations
         self.sample_size: int = sample_size
         self.lower: Union[float, int] = lower
         self.upper: Union[float, int] = upper
         self.tau: Union[float, int] = kwargs.get('tau', 1)
+        if not isinstance(self.tau, float) or not isinstance(self.tau, int):
+            warn('Wrong tau has been specified! Falling back from {} to default value 1'.format(self.tau))
+            self.tau = 1
         self.max_size: int = kwargs.get('max_size', 100)
+        if not isinstance(self.max_size, int):
+            warn('Wrong max_size has been specified! Falling back from {} to default value 100'.format(self.max_size))
+            self.max_size = 100
         self.__order: int = kwargs.get('order', 2)
-        self.q_fourier_coeffs: np.ndarray = np.repeat([0], self.max_size)
-        self.sigmas: np.ndarray = np.repeat([0], self.max_size)
+        if not isinstance(self.__order, int):
+            warn('Wrong max_size has been specified! Falling back from {} to default value 2'.format(self.__order))
+            self.__order = 100
+        self.q_fourier_coeffs: np.ndarray = np.repeat([0.], self.max_size)
+        self.sigmas: np.ndarray = np.repeat([0.], self.max_size)
         self.regularization_param: float = 0.
         self.oracle_param: Optional[float] = None
         self.oracle_loss: Optional[float] = None
@@ -232,7 +255,7 @@ class Tikhonov(EstimatorSpectrum):
         self.vs: list = []
         self.solution: Optional[Callable] = None
         njobs = kwargs.get('njobs')
-        if njobs is None or njobs < 0:
+        if njobs is None or njobs < 0 or not isinstance(njobs, int):
             njobs = cpu_count()
         self.client = Client(threads_per_worker=1, n_workers=njobs)
 
@@ -403,19 +426,34 @@ class Landweber(EstimatorSpectrum):
         """
         EstimatorSpectrum.__init__(self, kernel, observations, sample_size, lower, upper)
         self.kernel: Callable = kernel
+        assert isinstance(singular_values, Generator), 'Please provide the singular values as generator'
         self.singular_values: Generator = singular_values
+        assert isinstance(left_singular_functions, Generator), 'Please provide the left singular functions as generator'
         self.left_singular_functions: Generator = left_singular_functions
+        assert isinstance(right_singular_functions, Generator), 'Please provide the right singular functions as generator'
         self.right_singular_functions: Generator = right_singular_functions
         self.observations: np.ndarray = observations
         self.sample_size: int = sample_size
         self.lower: Union[float, int] = lower
         self.upper: Union[float, int] = upper
         self.tau: Union[float, int] = kwargs.get('tau', 1)
+        if not isinstance(self.tau, float) or not isinstance(self.tau, int):
+            warn('Wrong tau has been specified! Falling back from {} to default value 1'.format(self.tau))
+            self.tau = 1
         self.max_size: int = kwargs.get('max_size', 100)
+        if not isinstance(self.max_size, int):
+            warn('Wrong max_size has been specified! Falling back from {} to default value 100'.format(self.max_size))
+            self.max_size = 100
         self.max_iter: int = kwargs.get('max_iter', 100)
+        if not isinstance(self.max_iter, int):
+            warn('Wrong max_iter has been specified! Falling back from {} to default value 100'.format(self.max_iter))
+            self.max_iter = 100
         self.__relaxation: float = kwargs.get('relaxation', 0.8)
-        self.q_fourier_coeffs: np.ndarray = np.repeat([0], self.max_size)
-        self.sigmas: np.ndarray = np.repeat([0], self.max_size)
+        if not isinstance(self.__relaxation, float) or not isinstance(self.__relaxation, int):
+            warn('Wrong tau has been specified! Falling back from {} to default value 0.8'.format(self.__relaxation))
+            self.__relaxation = 0.8
+        self.q_fourier_coeffs: np.ndarray = np.repeat([0.], self.max_size)
+        self.sigmas: np.ndarray = np.repeat([0.], self.max_size)
         self.regularization_param: int = 0
         self.oracle_param: Optional[float] = None
         self.oracle_loss: Optional[float] = None
@@ -424,7 +462,7 @@ class Landweber(EstimatorSpectrum):
         self.vs: list = []
         self.solution: Optional[Callable] = None
         njobs = kwargs.get('njobs')
-        if njobs is None or njobs < 0:
+        if njobs is None or njobs < 0 or not isinstance(njobs, int):
             njobs = cpu_count()
         self.client = Client(threads_per_worker=1, n_workers=njobs)
 
