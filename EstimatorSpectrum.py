@@ -95,7 +95,7 @@ class TSVD(EstimatorSpectrum):
 
     def __singular_functions(self) -> None:
         """
-        Collect a max_size right singular functions.    
+        Collect a max_size right singular functions.
         """
         self.vs = [next(self.right_singular_functions) for _ in range(self.max_size)]
 

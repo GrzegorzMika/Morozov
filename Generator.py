@@ -1,9 +1,10 @@
 import warnings
 from abc import abstractmethod, ABCMeta
-from typing import Callable, Union, List, Any, Optional
+from typing import Callable, Union, List, Any, Optional, Iterable
 from warnings import warn
 
 import numpy as np
+from dask.distributed import Client
 from scipy.integrate import quad
 from scipy.optimize import root_scalar
 
@@ -244,16 +245,18 @@ class LSW(Generator):
         Sample the spheres radii according to the given probability density function.
         """
         if not self.inverse_transformation:
-            samples: list = []
+            cdf: Callable = self.cdf
             uniform: np.ndarray = np.random.uniform(0, 1, self.sample_size)
-            for seed in uniform:  # TODO: speed up
-                def shifted(x: float) -> float:
-                    return self.cdf(x) - seed
-                solution = self.__solve(shifted)
-                samples.append(solution)
+
+            def shift_fun(u: float) -> Callable:
+                return lambda x: cdf(x) - u
+
+            shifted: Iterable = map(shift_fun, uniform)
+            samples_map: Iterable = map(self.__solve, shifted)
+            samples = np.fromiter(samples_map, dtype=np.float64, count=self.sample_size[0])
         else:
             samples: np.ndarray = getattr(np.random, self.pdf)(size=self.sample_size, **self.kwargs)
-        self.r_sample = np.array(samples)
+        self.r_sample = samples
 
     def sample_z(self) -> None:
         """
