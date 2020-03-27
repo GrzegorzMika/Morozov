@@ -30,10 +30,10 @@ if __name__ == '__main__':
                         spectrum = LordWillisSpektor(transformed_measure=False)
                         obs = generator.generate()
                         tikhonov = Tikhonov(kernel=kernel, singular_values=spectrum.singular_values,
-                                              left_singular_functions=spectrum.left_functions,
-                                              right_singular_functions=spectrum.right_functions,
-                                              observations=obs, sample_size=s, max_size=max_size,
-                                              max_iter=max_iter, order=order)
+                                            left_singular_functions=spectrum.left_functions,
+                                            right_singular_functions=spectrum.right_functions,
+                                            observations=obs, sample_size=s, max_size=max_size,
+                                            max_iter=max_iter, order=order)
                         tikhonov.estimate()
                         tikhonov.oracle(fun)
                         solution = list(tikhonov.solution(np.linspace(0, 1, 10000)))

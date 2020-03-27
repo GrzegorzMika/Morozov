@@ -12,7 +12,8 @@ from decorators import timer
 
 class TSVD(EstimatorSpectrum):
     def __init__(self, kernel, singular_values, left_singular_functions, right_singular_functions, observations,
-                 sample_size, lower: Union[float, int] = 0, upper: Union[float, int] = 1, **kwargs):
+                 sample_size, transformed_measure: bool = False, lower: Union[float, int] = 0,
+                 upper: Union[float, int] = 1, **kwargs):
         """
         Instance of TSVD solver for inverse problem in Poisson noise with known spectral decomposition.
         :param kernel: Kernel of the integral operator.
@@ -27,6 +28,9 @@ class TSVD(EstimatorSpectrum):
         :type observations: numpy.ndarray
         :param sample_size: Theoretical sample size (n).
         :type sample_size: int
+        :param transformed_measure: To performed the calculations with respect to the ttransformed measure xdx (True) or
+        to stay with Lebesgue measure dx (False)
+        :type transformed_measure: boolean (default: False)
         :param lower: Lower end of the interval on which the operator is defined.
         :type lower: float
         :param upper: Upper end of the interval on which the operator is defined.
@@ -35,13 +39,14 @@ class TSVD(EstimatorSpectrum):
             - tau: Parameter used to rescale the obtained values of estimated noise level (float or int, default: 1).
             - max_size: Maximum number of functions included in Fourier expansion (int, default: 100).
         """
-        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, lower, upper)
+        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, lower, upper)
         self.kernel: Callable = kernel
         assert isinstance(singular_values, Generator), 'Please provide the singular values as generator'
         self.singular_values: Generator = singular_values
         assert isinstance(left_singular_functions, Generator), 'Please provide the left singular functions as generator'
         self.left_singular_functions: Generator = left_singular_functions
-        assert isinstance(right_singular_functions, Generator), 'Please provide the right singular functions as generator'
+        assert isinstance(right_singular_functions,
+                          Generator), 'Please provide the right singular functions as generator'
         self.right_singular_functions: Generator = right_singular_functions
         self.observations: np.ndarray = observations
         self.sample_size: int = sample_size
@@ -68,6 +73,7 @@ class TSVD(EstimatorSpectrum):
         if njobs is None or njobs < 0 or not isinstance(njobs, int):
             njobs = cpu_count()
         self.client = Client(threads_per_worker=1, n_workers=njobs)
+        print('Dashboard available under: {}'.format(self.client.dashboard_link))
 
     @timer
     def __find_fourier_coeffs(self) -> None:
@@ -82,8 +88,12 @@ class TSVD(EstimatorSpectrum):
         lower: Union[float, int] = self.lower
         upper: Union[float, int] = self.upper
 
-        def product(function: Callable) -> Callable:
-            return lambda x: q_estimator(x) * function(x)
+        if self.transformed_measure:
+            def product(function: Callable) -> Callable:
+                return lambda x: q_estimator(x) * function(x) * x
+        else:
+            def product(function: Callable) -> Callable:
+                return lambda x: q_estimator(x) * function(x)
 
         def integrate(function: Callable) -> float:
             return quad(function, lower, upper, limit=10000)[0]
@@ -140,10 +150,16 @@ class TSVD(EstimatorSpectrum):
             if residual <= np.sqrt(self.tau) * self.delta:
                 break
 
-        def solution(x: Union[float, int]) -> np.ndarray:
-            return np.sum(
-                np.multiply(np.multiply(self.__regularization(np.square(self.sigmas), self.regularization_param),
-                                        self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
+        if self.transformed_measure:
+            def solution(x: Union[float, int]) -> np.ndarray:
+                return np.multiply(x, np.sum(np.multiply(
+                    np.multiply(self.__regularization(np.square(self.sigmas), self.regularization_param),
+                                self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs]))))
+        else:
+            def solution(x: Union[float, int]) -> np.ndarray:
+                return np.sum(np.multiply(
+                    np.multiply(self.__regularization(np.square(self.sigmas), self.regularization_param),
+                                self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
 
         self.solution = np.vectorize(solution)
 
@@ -151,7 +167,7 @@ class TSVD(EstimatorSpectrum):
         pass
 
     @timer
-    def oracle(self, true: Callable, patience: int = 3) -> None:
+    def oracle(self, true: Callable, patience: int = 1) -> None:
         """
         Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
         :param true: True solution.
@@ -164,16 +180,22 @@ class TSVD(EstimatorSpectrum):
         counter = 0
         oracle_solutions = []
 
-        def residual(function):
-            return lambda x: np.square(true(x) - function(x))
+        def residual(solution):
+            return lambda x: np.square(true(x) - solution(x))
 
         for alpha in np.square(np.concatenate([[np.inf], self.sigmas])):
             parameters.append(alpha)
 
-            def solution(x: Union[float, int]) -> np.ndarray:
-                return np.sum(
-                    np.multiply(np.multiply(self.__regularization(np.square(self.sigmas), alpha),
-                                            self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
+            if self.transformed_measure:
+                def solution(x: Union[float, int]) -> np.ndarray:
+                    return np.multiply(x, np.sum(np.multiply(
+                        np.multiply(self.__regularization(np.square(self.sigmas), alpha), self.q_fourier_coeffs),
+                        np.array([fun(x) for fun in self.vs]))))
+            else:
+                def solution(x: Union[float, int]) -> np.ndarray:
+                    return np.sum(np.multiply(
+                        np.multiply(self.__regularization(np.square(self.sigmas), alpha), self.q_fourier_coeffs),
+                        np.array([fun(x) for fun in self.vs])))
 
             solution = np.vectorize(solution)
             oracle_solutions.append(solution(np.linspace(0, 1, 10000)))
@@ -187,7 +209,7 @@ class TSVD(EstimatorSpectrum):
                 counter += 1
             if counter == patience:
                 break
-        res = residual(function=self.solution)
+        res = residual(solution=self.solution)
         self.oracle_param = parameters[losses.index(min(losses))]
         self.oracle_loss = min(losses)
         self.oracle_solution = oracle_solutions[losses.index(min(losses))]
@@ -196,7 +218,8 @@ class TSVD(EstimatorSpectrum):
 
 class Tikhonov(EstimatorSpectrum):
     def __init__(self, kernel, singular_values, left_singular_functions, right_singular_functions, observations,
-                 sample_size, lower: Union[float, int] = 0, upper: Union[float, int] = 1, **kwargs):
+                 sample_size, transformed_measure: bool = False, lower: Union[float, int] = 0,
+                 upper: Union[float, int] = 1, **kwargs):
         """
         Instance of iterated Tikhonov solver for inverse problem in Poisson noise with known spectral decomposition.
         :param kernel: Kernel of the integral operator.
@@ -211,6 +234,9 @@ class Tikhonov(EstimatorSpectrum):
         :type observations: numpy.ndarray
         :param sample_size: Theoretical sample size (n).
         :type sample_size: int
+        :param transformed_measure: To performed the calculations with respect to the ttransformed measure xdx (True) or
+        to stay with Lebesgue measure dx (False)
+        :type transformed_measure: boolean (default: False)
         :param lower: Lower end of the interval on which the operator is defined.
         :type lower: float
         :param upper: Upper end of the interval on which the operator is defined.
@@ -221,13 +247,14 @@ class Tikhonov(EstimatorSpectrum):
             - order: Order of the iterated algorithm. Estimator for each regularization parameter is obtained after
                     order iterations. Ordinary Tikhonov estimator is obtained for order = 1 (int, default: 2).
         """
-        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, lower, upper)
+        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, lower, upper)
         self.kernel: Callable = kernel
         assert isinstance(singular_values, Generator), 'Please provide the singular values as generator'
         self.singular_values: Generator = singular_values
         assert isinstance(left_singular_functions, Generator), 'Please provide the left singular functions as generator'
         self.left_singular_functions: Generator = left_singular_functions
-        assert isinstance(right_singular_functions, Generator), 'Please provide the right singular functions as generator'
+        assert isinstance(right_singular_functions,
+                          Generator), 'Please provide the right singular functions as generator'
         self.right_singular_functions: Generator = right_singular_functions
         self.observations: np.ndarray = observations
         self.sample_size: int = sample_size
@@ -258,6 +285,7 @@ class Tikhonov(EstimatorSpectrum):
         if njobs is None or njobs < 0 or not isinstance(njobs, int):
             njobs = cpu_count()
         self.client = Client(threads_per_worker=1, n_workers=njobs)
+        print('Dashboard available under: {}'.format(self.client.dashboard_link))
 
     @property
     def order(self) -> int:
@@ -280,8 +308,12 @@ class Tikhonov(EstimatorSpectrum):
         lower: Union[float, int] = self.lower
         upper: Union[float, int] = self.upper
 
-        def product(function: Callable) -> Callable:
-            return lambda x: q_estimator(x) * function(x)
+        if self.transformed_measure:
+            def product(function: Callable) -> Callable:
+                return lambda x: q_estimator(x) * function(x) * x
+        else:
+            def product(function: Callable) -> Callable:
+                return lambda x: q_estimator(x) * function(x)
 
         def integrate(function: Callable) -> float:
             return quad(function, lower, upper, limit=10000)[0]
@@ -341,9 +373,14 @@ class Tikhonov(EstimatorSpectrum):
                 self.residual = residual
                 break
 
-        def solution(x: Union[float, int]) -> np.ndarray:
-            return np.sum(
-                np.multiply(
+        if self.transformed_measure:
+            def solution(x: Union[float, int]) -> np.ndarray:
+                return np.multiply(x, np.sum(np.multiply(
+                    np.multiply(self.__regularization(np.square(self.sigmas), self.regularization_param, self.order),
+                                self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs]))))
+        else:
+            def solution(x: Union[float, int]) -> np.ndarray:
+                return np.sum(np.multiply(
                     np.multiply(self.__regularization(np.square(self.sigmas), self.regularization_param, self.order),
                                 self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
 
@@ -353,7 +390,7 @@ class Tikhonov(EstimatorSpectrum):
         pass
 
     @timer
-    def oracle(self, true: Callable, patience: int = 3) -> None:
+    def oracle(self, true: Callable, patience: int = 1) -> None:
         """
         Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
         :param true: True solution.
@@ -372,10 +409,16 @@ class Tikhonov(EstimatorSpectrum):
         for alpha in np.flip(np.linspace(0, 3, 1000)):
             parameters.append(alpha)
 
-            def solution(x: Union[float, int]) -> np.ndarray:
-                return np.sum(
-                    np.multiply(np.multiply(self.__regularization(np.square(self.sigmas), alpha, self.order),
-                                            self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
+            if self.transformed_measure:
+                def solution(x: Union[float, int]) -> np.ndarray:
+                    return np.multiply(x, np.sum(np.multiply(np.multiply(
+                        self.__regularization(np.square(self.sigmas), alpha, self.order),
+                        self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs]))))
+            else:
+                def solution(x: Union[float, int]) -> np.ndarray:
+                    return np.sum(np.multiply(np.multiply(
+                        self.__regularization(np.square(self.sigmas), alpha, self.order),
+                        self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
 
             solution = np.vectorize(solution)
             oracle_solutions.append(solution(np.linspace(0, 1, 10000)))
@@ -398,7 +441,8 @@ class Tikhonov(EstimatorSpectrum):
 
 class Landweber(EstimatorSpectrum):
     def __init__(self, kernel, singular_values, left_singular_functions, right_singular_functions, observations,
-                 sample_size, lower: Union[float, int] = 0, upper: Union[float, int] = 1, **kwargs):
+                 sample_size, transformed_measure: bool = False, lower: Union[float, int] = 0,
+                 upper: Union[float, int] = 1, **kwargs):
         """
         Instance of iterated Tikhonov solver for inverse problem in Poisson noise with known spectral decomposition.
         :param kernel: Kernel of the integral operator.
@@ -413,6 +457,9 @@ class Landweber(EstimatorSpectrum):
         :type observations: numpy.ndarray
         :param sample_size: Theoretical sample size (n).
         :type sample_size: int
+        :param transformed_measure: To performed the calculations with respect to the ttransformed measure xdx (True) or
+        to stay with Lebesgue measure dx (False)
+        :type transformed_measure: boolean (default: False)
         :param lower: Lower end of the interval on which the operator is defined.
         :type lower: float
         :param upper: Upper end of the interval on which the operator is defined.
@@ -424,13 +471,14 @@ class Landweber(EstimatorSpectrum):
             singular value is scaled by this value(float, default: 0.8).
             - max_iter: Maximum number of iterations of the algorithm (int, default: 100)
         """
-        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, lower, upper)
+        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, lower, upper)
         self.kernel: Callable = kernel
         assert isinstance(singular_values, Generator), 'Please provide the singular values as generator'
         self.singular_values: Generator = singular_values
         assert isinstance(left_singular_functions, Generator), 'Please provide the left singular functions as generator'
         self.left_singular_functions: Generator = left_singular_functions
-        assert isinstance(right_singular_functions, Generator), 'Please provide the right singular functions as generator'
+        assert isinstance(right_singular_functions,
+                          Generator), 'Please provide the right singular functions as generator'
         self.right_singular_functions: Generator = right_singular_functions
         self.observations: np.ndarray = observations
         self.sample_size: int = sample_size
@@ -450,7 +498,8 @@ class Landweber(EstimatorSpectrum):
             self.max_iter = 100
         self.__relaxation: float = kwargs.get('relaxation', 0.8)
         if not isinstance(self.__relaxation, float) and not isinstance(self.__relaxation, int):
-            warn('Wrong relaxation has been specified! Falling back from {} to default value 0.8'.format(self.__relaxation))
+            warn('Wrong relaxation has been specified! Falling back from {} to default value 0.8'.format(
+                self.__relaxation))
             self.__relaxation = 0.8
         self.q_fourier_coeffs: np.ndarray = np.repeat([0.], self.max_size)
         self.sigmas: np.ndarray = np.repeat([0.], self.max_size)
@@ -465,6 +514,7 @@ class Landweber(EstimatorSpectrum):
         if njobs is None or njobs < 0 or not isinstance(njobs, int):
             njobs = cpu_count()
         self.client = Client(threads_per_worker=1, n_workers=njobs)
+        print('Dashboard available under: {}'.format(self.client.dashboard_link))
 
     @property
     def relaxation(self) -> float:
@@ -487,8 +537,12 @@ class Landweber(EstimatorSpectrum):
         lower: Union[float, int] = self.lower
         upper: Union[float, int] = self.upper
 
-        def product(function: Callable) -> Callable:
-            return lambda x: q_estimator(x) * function(x)
+        if self.transformed_measure:
+            def product(function: Callable) -> Callable:
+                return lambda x: q_estimator(x) * function(x) * x
+        else:
+            def product(function: Callable) -> Callable:
+                return lambda x: q_estimator(x) * function(x)
 
         def integrate(function: Callable) -> float:
             return quad(function, lower, upper, limit=10000)[0]
@@ -546,19 +600,22 @@ class Landweber(EstimatorSpectrum):
         for k in np.arange(0, self.max_iter):
             residual = np.sqrt(np.sum(np.multiply(np.square(
                 np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
-                                        np.square(self.sigmas)),
-                            1)), np.square(self.q_fourier_coeffs))))
+                                        np.square(self.sigmas)), 1)), np.square(self.q_fourier_coeffs))))
             self.regularization_param = k
             if residual <= np.sqrt(self.tau) * self.delta:
                 self.residual = residual
                 break
 
-        def solution(x: Union[float, int]) -> np.ndarray:
-            return np.sum(
-                np.multiply(
-                    np.multiply(
-                        self.__regularization(np.square(self.sigmas), self.regularization_param, self.relaxation),
-                        self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
+        if self.transformed_measure:
+            def solution(x: Union[float, int]) -> np.ndarray:
+                return np.multiply(x, np.sum(np.multiply(np.multiply(
+                    self.__regularization(np.square(self.sigmas), self.regularization_param, self.relaxation),
+                    self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs]))))
+        else:
+            def solution(x: Union[float, int]) -> np.ndarray:
+                return np.sum(np.multiply(np.multiply(
+                    self.__regularization(np.square(self.sigmas), self.regularization_param, self.relaxation),
+                    self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
 
         self.solution = np.vectorize(solution)
 
@@ -566,7 +623,7 @@ class Landweber(EstimatorSpectrum):
         pass
 
     @timer
-    def oracle(self, true: Callable, patience: int = 3) -> None:
+    def oracle(self, true: Callable, patience: int = 1) -> None:
         """
         Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
         :param true: True solution.
@@ -585,10 +642,16 @@ class Landweber(EstimatorSpectrum):
         for k in np.arange(0, self.max_iter):
             parameters.append(k)
 
-            def solution(x: Union[float, int]) -> np.ndarray:
-                return np.sum(
-                    np.multiply(np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
-                                            self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
+            if self.transformed_measure:
+                def solution(x: Union[float, int]) -> np.ndarray:
+                    return np.multiply(x, np.sum(np.multiply(
+                        np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
+                                    self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs]))))
+            else:
+                def solution(x: Union[float, int]) -> np.ndarray:
+                    return np.sum(np.multiply(
+                        np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
+                                    self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
 
             solution = np.vectorize(solution)
             oracle_solutions.append(solution(np.linspace(0, 1, 10000)))

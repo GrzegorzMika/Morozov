@@ -22,3 +22,7 @@ def SMLB(x):
 
 def kernel(x, y):
     return np.where(x >= y, 2 * y, 0)
+
+
+def kernel_transformed(x, y):
+    return np.where(x >= y, 2, 0)

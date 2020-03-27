@@ -133,8 +133,9 @@ class EstimatorAbstract(metaclass=ABCMeta):
 
 
 class EstimatorSpectrum(EstimatorAbstract):
-    def __init__(self, kernel: Callable, observations: np.ndarray, sample_size: int,
+    def __init__(self, kernel: Callable, observations: np.ndarray, sample_size: int, transformed_measure: bool,
                  lower: Union[float, int] = 0, upper: Union[float, int] = 1):
+        self.transformed_measure = transformed_measure
         assert isinstance(kernel, Callable), 'Kernel function must be callable'
         try:
             kernel(np.array([1, 2]), np.array([1, 2]))
@@ -176,9 +177,14 @@ class EstimatorSpectrum(EstimatorAbstract):
         kernel: Callable = self.kernel
         sample_size: int = self.sample_size
 
-        def __q_estimator(x: Union[float, int]) -> np.float64:
-            x: np.ndarray = np.repeat(x, observations.shape[0])
-            return np.divide(np.sum(kernel(x, observations)), sample_size)
+        if self.transformed_measure:
+            def __q_estimator(x: Union[float, int]) -> np.float64:
+                x: np.ndarray = np.repeat(x, observations.shape[0])
+                return np.divide(np.multiply(2, np.sum(np.less(observations, x))), sample_size)
+        else:
+            def __q_estimator(x: Union[float, int]) -> np.float64:
+                x: np.ndarray = np.repeat(x, observations.shape[0])
+                return np.divide(np.sum(kernel(x, observations)), sample_size)
 
         self.q_estimator = np.vectorize(__q_estimator)
 
@@ -202,8 +208,11 @@ class EstimatorSpectrum(EstimatorAbstract):
         Estimate noise level based on the observations and known kernel (via w function).
         """
         print('Estimating noise level...')
-        self.__w_function_calculation()
-        self.delta = np.sqrt(np.divide(np.sum(self.__w_function(self.observations)), self.sample_size ** 2))
+        if self.transformed_measure:
+            self.delta = np.sqrt(np.divide(np.sum(np.square(1-self.observations)), self.sample_size ** 2))
+        else:
+            self.__w_function_calculation()
+            self.delta = np.sqrt(np.divide(np.sum(self.__w_function(self.observations)), self.sample_size ** 2))
         print('Estimated noise level: {}'.format(self.delta))
 
     def estimate(self, *args, **kwargs):
