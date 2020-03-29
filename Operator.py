@@ -114,8 +114,8 @@ class Operator(Quadrature):
         self.grid_size: int = grid_size
         self.adjoint: bool = adjoint
         self.quadrature: Callable = getattr(super(), quadrature)
-        self.__K: np.ndarray = np.zeros((grid_size, grid_size)).astype(np.float64)
-        self.__KH: np.ndarray = np.zeros((grid_size, grid_size)).astype(np.float64)
+        self.__K: Union[np.ndarray, cp.ndarray] = np.zeros((grid_size, grid_size), dtype=np.float64)
+        self.__KH: Union[np.ndarray, cp.ndarray] = np.zeros((grid_size, grid_size), dtype=np.float64)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()
 
     # noinspection PyPep8Naming
@@ -180,5 +180,5 @@ class Operator(Quadrature):
 
     @timer
     def __move_to_gpu(self):
-        self.__K = cp.asarray(self.__K.astype(np.float64))
-        self.__KH = cp.asarray(self.__KH.astype(np.float64))
+        self.__K = cp.asarray(self.__K, dtype=cp.float64)
+        self.__KH = cp.asarray(self.__KH, dtype=cp.float64)
