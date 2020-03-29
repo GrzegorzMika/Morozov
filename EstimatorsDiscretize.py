@@ -52,14 +52,6 @@ class Landweber(EstimatorDiscretize, Operator):
         """
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
         EstimatorDiscretize.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
-        self.kernel: Callable = kernel
-        self.lower: float = float(lower)
-        self.upper: float = float(upper)
-        self.grid_size: int = grid_size
-        assert isinstance(observations, np.ndarray)
-        self.__observations: np.ndarray = observations.astype(np.float64)
-        assert isinstance(sample_size, int), 'Please specify the sample size as an integer'
-        self.sample_size: int = sample_size
         self.max_iter: int = kwargs.get('max_iter', 100)
         self.__tau: Union[float, int] = kwargs.get('tau', 1.)
         assert isinstance(self.__tau, float) | isinstance(self.__tau, int), 'tau must be a number'
@@ -214,15 +206,6 @@ class Tikhonov(EstimatorDiscretize, Operator):
         """
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
         EstimatorDiscretize.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
-
-        self.kernel: Callable = kernel
-        self.lower: float = float(lower)
-        self.upper: float = float(upper)
-        self.grid_size: int = grid_size
-        assert isinstance(observations, np.ndarray)
-        self.__observations: np.ndarray = observations.astype(np.float64)
-        assert isinstance(sample_size, int), 'Please specify the sample size as an integer'
-        self.sample_size: int = sample_size
         assert isinstance(order, int), 'Please specify the order as an integer'
         self.__order: int = order
         self.grid_max_iter: int = kwargs.get('grid_max_iter', 50)
@@ -421,14 +404,6 @@ class TSVD(EstimatorDiscretize, Operator):
         """
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
         EstimatorDiscretize.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
-        self.kernel: Callable = kernel
-        self.lower: float = float(lower)
-        self.upper: float = float(upper)
-        self.grid_size: int = grid_size
-        assert isinstance(observations, np.ndarray)
-        self.__observations: np.ndarray = observations.astype(np.float64)
-        assert isinstance(sample_size, int), 'Please specify the sample size as an integer'
-        self.sample_size: int = sample_size
         self.__tau: Union[float, int] = kwargs.get('tau', 1.)
         assert isinstance(self.__tau, float) | isinstance(self.__tau, int), 'tau must be a number'
         self.previous: cp.ndarray = cp.empty(self.grid_size, dtype=cp.float64)

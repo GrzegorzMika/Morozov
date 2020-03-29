@@ -40,11 +40,6 @@ class EstimatorDiscretize(EstimatorAbstract, Quadrature):
         except ValueError:
             warn('Force vectorization of kernel')
             self.kernel: Callable = np.vectorize(kernel)
-        assert isinstance(lower, float) | isinstance(lower, int), "Lower limit must be number, but was {} " \
-                                                                  "provided".format(lower)
-        assert isinstance(upper, float) | isinstance(upper, int), "Upper limit must be a number, but was {} " \
-                                                                  "provided".format(upper)
-        assert isinstance(grid_size, int), 'Grid size must be an integer, but was {} provided'.format(grid_size)
         assert quadrature in ['rectangle', 'dummy'], 'This type of quadrature is not supported, currently only {} ' \
                                                      'are supported'.format(
             [method for method in dir(Quadrature) if not method.startswith('_')])
@@ -209,7 +204,7 @@ class EstimatorSpectrum(EstimatorAbstract):
         """
         print('Estimating noise level...')
         if self.transformed_measure:
-            self.delta = np.sqrt(np.divide(np.sum(np.square(1-self.observations)), self.sample_size ** 2))
+            self.delta = np.sqrt(np.divide(np.sum(np.square(1 - self.observations)), self.sample_size ** 2))
         else:
             self.__w_function_calculation()
             self.delta = np.sqrt(np.divide(np.sum(self.__w_function(self.observations)), self.sample_size ** 2))

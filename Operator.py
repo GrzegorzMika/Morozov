@@ -87,13 +87,6 @@ class Operator(Quadrature):
         :param quadrature: Type of quadrature used to approximate the operator.
         :type quadrature: str
         """
-        assert isinstance(lower, float) | isinstance(lower,
-                                                     int), "Lower limit must be number, but was {} provided".format(
-            lower)
-        assert isinstance(upper, float) | isinstance(upper,
-                                                     int), "Upper limit must be a number, but was {} provided".format(
-            upper)
-        assert isinstance(grid_size, int), 'Grid size must be an integer, but was {} provided'.format(grid_size)
         assert isinstance(adjoint,
                           bool), 'Condition if operator is self-adjoint must be boolean, but was {} provided'.format(
             adjoint)
@@ -109,9 +102,6 @@ class Operator(Quadrature):
         except ValueError:
             warn('Force vectorization of kernel')
             self.kernel: Callable = np.vectorize(kernel)
-        self.lower: float = float(lower)
-        self.upper: float = float(upper)
-        self.grid_size: int = grid_size
         self.adjoint: bool = adjoint
         self.quadrature: Callable = getattr(super(), quadrature)
         self.__K: Union[np.ndarray, cp.ndarray] = np.zeros((grid_size, grid_size), dtype=np.float64)
