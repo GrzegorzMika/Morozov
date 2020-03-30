@@ -5,9 +5,54 @@ from warnings import warn
 
 import numpy as np
 from scipy.integrate import quad
-from scipy.optimize import root_scalar
+from scipy.optimize import root_scalar, minimize_scalar
 
 from decorators import vectorize
+
+
+class SamplerMixin:
+    @staticmethod
+    def inversion(pdf, size):
+        def cdf(x):
+            if x < 0:
+                return 0.
+            elif x > 1:
+                return 1.
+            else:
+                return quad(pdf, 0, x)[0]
+
+        sample = []
+        roots = np.random.uniform(0, 1, size)
+        for u in roots:
+            def shifted(x):
+                return cdf(x) - u
+            sample.append(root_scalar(shifted, method='bisect', x0=0.5, bracket=[0, 1]).root)
+        return np.array(sample)
+
+    @staticmethod
+    def rejection(pdf, size):
+        c = -minimize_scalar(lambda x: -pdf(x), bounds=(0, 1), method='bounded', tol=1e-10).fun
+        sample = []
+        while len(sample) < size:
+            u1 = np.random.uniform(0, 1, 1)
+            u2 = np.random.uniform(0, 1, 1)
+            if u2 <= pdf(u1) / c:
+                sample.append(u1)
+        return np.array(sample).flatten()
+
+    @staticmethod
+    def rejection_numpy(pdf, size, upper_bound=10):
+        c = -minimize_scalar(lambda x: -pdf(x), bounds=(0, 1), method='bounded', tol=1e-10).fun
+        max_size = upper_bound * int(c) * size
+        notready = True
+        while notready:
+            u1 = np.random.uniform(0, 1, max_size)
+            u2 = np.random.uniform(0, 1, max_size)
+            pdf_sample = pdf(u1) / c
+            sample = u1[np.less_equal(u2, pdf_sample)]
+            if sample.shape[0] >= size:
+                notready = False
+        return sample[:size]
 
 
 class Generator(metaclass=ABCMeta):
@@ -214,45 +259,47 @@ class LSW(Generator):
             self.pdf = lambda x: pdf_tmp(x) / normalize
             self.pdf = np.vectorize(self.pdf)
 
-    @vectorize(signature='(),()->()')
-    def cdf(self, x: float) -> float:
-        """
-        Calculate the value of cumulative distribution function for given probability density function in given point.
-        :param x: Point in which the value of the cumulative distribution function is calculated.
-        :type x: float
-        :return: Value of the cumulative distribution function in point x.
-        """
-        if x < 0:
-            return 0.
-        elif x > 1:
-            return 1.
-        else:
-            return quad(self.pdf, 0, x)[0]
+    # @vectorize(signature='(),()->()')
+    # def cdf(self, x: float) -> float:
+    #     """
+    #     Calculate the value of cumulative distribution function for given probability density function in given point.
+    #     :param x: Point in which the value of the cumulative distribution function is calculated.
+    #     :type x: float
+    #     :return: Value of the cumulative distribution function in point x.
+    #     """
+    #     if x < 0:
+    #         return 0.
+    #     elif x > 1:
+    #         return 1.
+    #     else:
+    #         return quad(self.pdf, 0, x)[0]
+    #
+    # @staticmethod
+    # def __solve(f: Callable) -> float:
+    #     """
+    #     Find the argument solving the equation f(x) = 0 in interval [0, 1].
+    #     :param f: Function for which the zero is to be found.
+    #     :type f: callable
+    #     :return: Root of function f.
+    #     """
+    #     return root_scalar(f, method='bisect', x0=0.5, bracket=[0, 1]).root
 
-    @staticmethod
-    def __solve(f: Callable) -> float:
-        """
-        Find the argument solving the equation f(x) = 0 in interval [0, 1].
-        :param f: Function for which the zero is to be found.
-        :type f: callable
-        :return: Root of function f.
-        """
-        return root_scalar(f, method='bisect', x0=0.5, bracket=[0, 1]).root
-
-    def sample_r(self) -> None:
+    def sample_r(self, method='rejection_numpy') -> None:
         """
         Sample the spheres radii according to the given probability density function.
         """
         if not self.inverse_transformation:
-            cdf: Callable = self.cdf
-            uniform: np.ndarray = np.random.uniform(0, 1, self.sample_size)
-
-            def shift_fun(u: float) -> Callable:
-                return lambda x: cdf(x) - u
-
-            shifted: Iterable = map(shift_fun, uniform)
-            samples_map: Iterable = map(self.__solve, shifted)
-            samples = np.fromiter(samples_map, dtype=np.float64, count=self.sample_size[0])
+            sampler = getattr(SamplerMixin, method)
+            # cdf: Callable = self.cdf
+            # uniform: np.ndarray = np.random.uniform(0, 1, self.sample_size)
+            #
+            # def shift_fun(u: float) -> Callable:
+            #     return lambda x: cdf(x) - u
+            #
+            # shifted: Iterable = map(shift_fun, uniform)
+            # samples_map: Iterable = map(self.__solve, shifted)
+            # samples = np.fromiter(samples_map, dtype=np.float64, count=self.sample_size[0])
+            samples = sampler(pdf=self.pdf, size=self.sample_size[0])
         else:
             samples: np.ndarray = getattr(np.random, self.pdf)(size=self.sample_size, **self.kwargs)
         self.r_sample = samples
