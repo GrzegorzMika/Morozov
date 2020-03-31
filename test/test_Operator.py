@@ -1,6 +1,10 @@
+import sys
+import os
 import numpy as np
 from numpy.testing import assert_equal
 from pytest import raises
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Operator import Operator
 
 

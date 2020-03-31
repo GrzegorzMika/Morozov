@@ -39,7 +39,7 @@ class TestGeneratorString:
 
     def test_sample_size(self):
         assert hasattr(generator, 'sample_size')
-        assert generator.sample_size == 98
+        assert generator.sample_size[0] == 98
 
     def test_inverse_transformation(self):
         assert hasattr(generator, 'inverse_transformation')
@@ -68,15 +68,6 @@ class TestGeneratorString:
 
     def test_visualize_method(self):
         assert callable(generator.visualize)
-
-    def test_cdf(self):
-        assert hasattr(generator, 'cdf')
-        assert callable(generator.cdf)
-
-    def test_solve(self):
-        assert hasattr(generator, '_LSW__solve')
-        assert callable(generator._LSW__solve)
-        assert generator._LSW__solve(lambda x: x - 1) == 1
 
 
 class TestObservationnsString:
@@ -132,22 +123,13 @@ class TestGeneratorCustom:
     def test_visualize_method(self):
         assert callable(generator_custom.visualize)
 
-    def test_cdf(self):
-        assert hasattr(generator_custom, 'cdf')
-        assert callable(generator_custom.cdf)
-        assert_almost_equal(generator_custom.cdf(1), np.array([1]), decimal=8)
-
-    def test_solve(self):
-        assert hasattr(generator_custom, '_LSW__solve')
-        assert callable(generator_custom._LSW__solve)
-        assert generator_custom._LSW__solve(lambda x: x - 1) == 1
-
 
 class TestObservationsCustom:
     def test_sample_r(self):
         assert hasattr(generator_custom, 'sample_r')
         assert callable(generator_custom.sample_r)
-        generator_custom.sample_r()
+        with warns(RuntimeWarning):
+            generator_custom.sample_r()
         assert_equal(generator_custom.r_sample, np.load(find('r_sample_custom.npy', '/home')))
 
     def test_sample_z(self):
@@ -157,7 +139,8 @@ class TestObservationsCustom:
         assert_equal(generator_custom.z_sample, np.load(find('z_sample_custom.npy', '/home')))
 
     def test_observations(self):
-        observations = generator_custom.generate()
+        with warns(RuntimeWarning):
+            observations = generator_custom.generate()
         assert_equal(observations, np.load(find('lsw_sample_custom.npy', '/home')))
 
 

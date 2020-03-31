@@ -1,9 +1,12 @@
 import os
+import sys
 import numpy as np
 import cupy as cp
 from _pytest.recwarn import warns
 from numpy.testing import assert_equal, assert_almost_equal
 from pytest import raises
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from EstimatorsDiscretize import Landweber
 from Generator import LewisShedler
 

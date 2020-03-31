@@ -1,6 +1,6 @@
 import warnings
 from abc import abstractmethod, ABCMeta
-from typing import Callable, Union, List, Any, Optional, Iterable
+from typing import Callable, Union, List, Any, Optional
 from warnings import warn
 
 import numpy as np
@@ -252,6 +252,7 @@ class LSW(Generator):
         """
         super().__init__()
 
+        np.random.seed(seed)
         assert callable(pdf) | isinstance(pdf, str), 'Probability density function must be string or callable'
         self.pdf = pdf
         assert isinstance(sample_size, int), 'Sample size has to be specified as an integer'
@@ -260,7 +261,7 @@ class LSW(Generator):
         self.r_sample: Optional[np.ndarray] = None
         self.z_sample: Optional[np.ndarray] = None
         self.kwargs: dict = kwargs
-        np.random.seed(seed)
+
         if not self.inverse_transformation and (
                 quad(self.pdf, 0, 1)[0] > 1.0001 or quad(self.pdf, 0, 1)[0] < 0.9999):
             warn('Supplied pdf function is not a proper pdf function as it integrates to {}, running'

@@ -12,3 +12,4 @@ secretgc_ip.json
 ./cachedir
 /cachedir/
 secretgc_ip.json
+/test/cachedir/

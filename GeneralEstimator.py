@@ -130,6 +130,8 @@ class EstimatorDiscretize(EstimatorAbstract, Quadrature):
 class EstimatorSpectrum(EstimatorAbstract):
     def __init__(self, kernel: Callable, observations: np.ndarray, sample_size: int, transformed_measure: bool,
                  lower: Union[float, int] = 0, upper: Union[float, int] = 1):
+        assert isinstance(transformed_measure, bool), 'Please provide an information about measure transformation as ' \
+                                                      'True or False'
         self.transformed_measure = transformed_measure
         assert isinstance(kernel, Callable), 'Kernel function must be callable'
         try:
