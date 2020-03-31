@@ -12,7 +12,7 @@ from decorators import vectorize
 
 class SamplerMixin:
     @staticmethod
-    def inversion(pdf, size):
+    def inversion_pdf(pdf, size):
         def cdf(x):
             if x < 0:
                 return 0.
@@ -26,6 +26,18 @@ class SamplerMixin:
         for u in roots:
             def shifted(x):
                 return cdf(x) - u
+
+            sample.append(root_scalar(shifted, method='bisect', x0=0.5, bracket=[0, 1]).root)
+        return np.array(sample)
+
+    @staticmethod
+    def inversion_cdf(cdf, size):
+        sample = []
+        roots = np.random.uniform(0, 1, size)
+        for u in roots:
+            def shifted(x):
+                return cdf(x) - u
+
             sample.append(root_scalar(shifted, method='bisect', x0=0.5, bracket=[0, 1]).root)
         return np.array(sample)
 
@@ -91,10 +103,10 @@ class LewisShedler(Generator):
         assert callable(intensity_function), "intensity_function must be a callable!"
         try:
             intensity_function(np.array([1, 2]))
-            self.intensity_function = intensity_function
+            self.intensity_function: Callable = intensity_function
         except ValueError:
             warn('Force vectorization of intensity function')
-            self.intensity_function = np.vectorize(intensity_function)
+            self.intensity_function: Callable = np.vectorize(intensity_function)
         assert isinstance(upper, float) | isinstance(upper, int), "Wrong type of upper limit!"
         assert isinstance(lower, float) | isinstance(lower, int), "Wrong type of lower limit!"
         if lambda_hat is not None:
@@ -239,7 +251,7 @@ class LSW(Generator):
         :param kwargs: additional keyword arguments for numpy random generator
         """
         super().__init__()
-        np.random.seed(seed)
+
         assert callable(pdf) | isinstance(pdf, str), 'Probability density function must be string or callable'
         self.pdf = pdf
         assert isinstance(sample_size, int), 'Sample size has to be specified as an integer'
@@ -248,7 +260,7 @@ class LSW(Generator):
         self.r_sample: Optional[np.ndarray] = None
         self.z_sample: Optional[np.ndarray] = None
         self.kwargs: dict = kwargs
-
+        np.random.seed(seed)
         if not self.inverse_transformation and (
                 quad(self.pdf, 0, 1)[0] > 1.0001 or quad(self.pdf, 0, 1)[0] < 0.9999):
             warn('Supplied pdf function is not a proper pdf function as it integrates to {}, running'
@@ -375,6 +387,120 @@ class LSW(Generator):
             try:
                 plt.savefig('points_' + inspect.getsource(self.pdf).split('return')[1].strip() + '.png')
                 print('Saved as ' + 'points_' + inspect.getsource(self.pdf).split('return')[
+                    1].strip() + '.png')
+            except:
+                warnings.warn("Saving points failed!")
+        plt.show()
+        plt.clf()
+
+
+class CoxLewis(Generator):
+    def __init__(self, mean_function: Callable, lower: Union[float, int], upper: Union[float, int],
+                 sample_size: int, seed: Optional[float] = None):
+        """
+        Generator of observations from inhomogeneous Poisson process using Cox- Lewis algorithm.
+        :param mean_function: mean function of a simulated inhomogeneous Poisson process
+        :type mean_function: Callable
+        :param upper: upper limit of an interval on which process is simulated
+        :type upper: float
+        :param lower: lower limit of an interval on which process is simulated
+        :type lower: float (default: 0.)
+        :param seed: seed value for reproducibility
+        :type seed: float (default: None)
+        """
+        super().__init__()
+
+        assert callable(mean_function), "intensity_function must be a callable!"
+        try:
+            mean_function(np.array([1, 2]))
+            self.mean_function: Callable = mean_function
+        except ValueError:
+            warn('Force vectorization of intensity function')
+            self.mean_function: Callable = np.vectorize(mean_function)
+        assert isinstance(upper, float) | isinstance(upper, int), "Wrong type of upper limit!"
+        assert isinstance(lower, float) | isinstance(lower, int), "Wrong type of lower limit!"
+        if seed is not None:
+            assert isinstance(seed, float) | isinstance(seed, int), "Wrong type of seed!"
+        if np.sum(self.mean_function(np.random.uniform(lower, upper, int(1e6))) < 0) > 0:
+            raise ValueError("Mean function must be greater than or equal to 0!")
+        if lower >= upper:
+            raise ValueError("Wrong interval is specified! (lower {} >= upper {})".format(lower, upper))
+        self.lower: Union[float, int] = lower
+        self.upper: Union[float, int] = upper
+        self.scaler: Union[float, int] = mean_function(upper)
+        self.sample_size: np.ndarray = np.random.poisson(lam=self.scaler * sample_size, size=1)
+        np.random.seed(seed)
+
+    @vectorize(signature='(),()->()')
+    def scaled_mean_function(self, x):
+        return self.mean_function(x) / self.scaler
+
+    def generate(self) -> np.ndarray:
+        """
+        Simulation of an Inhomogeneous Poisson process with mean function λ(t), on [lower, upper] using
+        algorithm from D.R. Cox, P.A.W. Lewis, "The statistical analysis of series of events", Metheun, London, UK, 1966
+        :return: numpy array containing the simulated values of inhomogeneous process.
+        """
+        cdf = self.scaled_mean_function
+        sample: np.ndarray = SamplerMixin.inversion_cdf(cdf=cdf, size=self.sample_size[0])
+        return np.sort(sample)
+
+    def visualize(self, save: bool = False) -> None:
+        """
+        Auxiliary function to visualize and save the visualizations of an intensity function,
+        exemplary trajectory and location of points
+        :param save: to save (True) or not to save (False) the visualizations
+        :type save: boolean (default: False)
+        """
+        import matplotlib.pyplot as plt
+        import inspect
+
+        plt.style.use('seaborn-whitegrid')
+        plt.rcParams['figure.figsize'] = [10, 5]
+
+        grid = np.linspace(self.lower, self.upper, 10000)
+        func = self.mean_function(np.linspace(self.lower, self.upper, 10000))
+        try:
+            plt.plot(grid, func)
+        except:
+            plt.plot(grid, np.repeat(func, 10000))
+        plt.title('Intensity function')
+        plt.xlabel('time')
+        plt.ylabel('value')
+        if save:
+            try:
+                plt.savefig('intensity_function_' + inspect.getsource(self.mean_function).split('return')[
+                    1].strip() + '.png')
+                print('Saved as ' + 'intensity_function_' + inspect.getsource(self.mean_function).split('return')[
+                    1].strip() + '.png')
+            except:
+                warnings.warn("Saving intensity function failed!")
+        plt.show()
+        plt.clf()
+
+        t = self.generate()
+        plt.step(t, list(range(0, len(t))))
+        plt.title('Simulated trajectory')
+        plt.xlabel('time')
+        plt.ylabel('value')
+        if save:
+            try:
+                plt.savefig(
+                    'trajectory_' + inspect.getsource(self.mean_function).split('return')[1].strip() + '.png')
+                print('Saved as ' + 'trajectory_' + inspect.getsource(self.mean_function).split('return')[
+                    1].strip() + '.png')
+            except:
+                warnings.warn("Saving trajectory failed!")
+        plt.show()
+        plt.clf()
+
+        plt.plot(t, list(np.repeat(0, len(t))), '.')
+        plt.title('Simulated points')
+        plt.xlabel('time')
+        if save:
+            try:
+                plt.savefig('points_' + inspect.getsource(self.mean_function).split('return')[1].strip() + '.png')
+                print('Saved as ' + 'points_' + inspect.getsource(self.mean_function).split('return')[
                     1].strip() + '.png')
             except:
                 warnings.warn("Saving points failed!")
