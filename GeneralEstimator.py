@@ -1,6 +1,7 @@
 from abc import abstractmethod, ABCMeta
 from typing import Callable, Union, Optional, List
-from warnings import warn
+
+from joblib import Memory
 
 import cupy as cp
 from warnings import warn
@@ -9,7 +10,10 @@ import numpy as np
 from scipy.integrate import quad
 
 from Operator import Quadrature
-from decorators import timer
+from decorators import timer, vectorize
+
+location = './cachedir'
+memory = Memory(location, verbose=0, bytes_limit=1024 * 1024 * 1024)
 
 
 class EstimatorAbstract(metaclass=ABCMeta):
@@ -185,19 +189,32 @@ class EstimatorSpectrum(EstimatorAbstract):
 
         self.q_estimator = np.vectorize(__q_estimator)
 
-    def __w_function_calculation(self) -> None:
-        """
-        Calculate the w function based on the known kernel to be used for the noise level estimation.
-        """
-        kernel: Callable = self.kernel
-
-        def kernel_integrand(x: float, y: float) -> np.float64:
-            return np.square(kernel(x, y))
-
-        def w_function(y: float) -> float:
-            return quad(kernel_integrand, self.lower, self.upper, args=y, limit=10000)[0]
-
-        self.__w_function = np.vectorize(w_function)
+    # def __w_function_calculation(self) -> None:
+    #     """
+    #     Calculate the w function based on the known kernel to be used for the noise level estimation.
+    #     """
+    #     kernel: Callable = self.kernel
+    #
+    #     def kernel_integrand(x: float, y: float) -> np.float64:
+    #         return np.square(kernel(x, y))
+    #
+    #     def w_function(y: float) -> float:
+    #         return quad(kernel_integrand, self.lower, self.upper, args=y, limit=10000)[0]
+    #
+    #     self.__w_function = np.vectorize(w_function)
+    #
+    # @timer
+    # def estimate_delta_test(self):
+    #     """
+    #     Estimate noise level based on the observations and known kernel (via w function).
+    #     """
+    #     print('Estimating noise level...')
+    #     if self.transformed_measure:
+    #         self.delta = np.sqrt(np.divide(np.sum(np.square(1 - self.observations)), self.sample_size ** 2))
+    #     else:
+    #         self.__w_function_calculation()
+    #         self.delta = np.sqrt(np.divide(np.sum(self.__w_function(self.observations)), self.sample_size ** 2))
+    #     print('Estimated noise level: {}'.format(self.delta))
 
     @timer
     def estimate_delta(self):
@@ -208,8 +225,22 @@ class EstimatorSpectrum(EstimatorAbstract):
         if self.transformed_measure:
             self.delta = np.sqrt(np.divide(np.sum(np.square(1 - self.observations)), self.sample_size ** 2))
         else:
-            self.__w_function_calculation()
-            self.delta = np.sqrt(np.divide(np.sum(self.__w_function(self.observations)), self.sample_size ** 2))
+            kernel: Callable = self.kernel
+            lower = self.lower
+            upper = self.upper
+
+            def kernel_integrand(x: float, y: float) -> np.float64:
+                return np.square(kernel(x, y))
+
+            @vectorize(signature='()->()')
+            def w_function(y: float) -> float:
+                return quad(kernel_integrand, lower, upper, args=y, limit=10000)[0]
+
+            @memory.cache
+            def delta_estimator_helper_nontransformed(observations: np.ndarray, sample_size: int) -> float:
+                return np.sqrt(np.divide(np.sum(w_function(observations)), sample_size ** 2))
+
+            self.delta = delta_estimator_helper_nontransformed(self.observations, self.sample_size)
         print('Estimated noise level: {}'.format(self.delta))
 
     def estimate(self, *args, **kwargs):
