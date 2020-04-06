@@ -144,13 +144,11 @@ class EstimatorSpectrum(EstimatorAbstract):
         except ValueError:
             warn('Force vectorization of kernel')
             self.kernel: Callable = np.vectorize(kernel)
-        assert isinstance(lower, float) | isinstance(lower,
-                                                     int), 'Lower bound for integration interval must be a number, but ' \
-                                                           'was {} provided'.format(lower)
+        assert isinstance(lower, (int, float)), 'Lower bound for integration interval must be a number, but ' \
+                                                'was {} provided'.format(lower)
         self.lower: Union[float, int] = lower
-        assert isinstance(upper, float) | isinstance(upper,
-                                                     int), 'Upper bound for integration interval must be a number, but' \
-                                                           ' was {} provided'.format(upper)
+        assert isinstance(upper, (int, float)), 'Upper bound for integration interval must be a number, but' \
+                                                ' was {} provided'.format(upper)
         self.upper: Union[float, int] = upper
         assert isinstance(observations, np.ndarray), 'Please provide the observations in a form of numpy array'
         self.__observations: np.ndarray = observations
@@ -188,33 +186,6 @@ class EstimatorSpectrum(EstimatorAbstract):
                 return np.divide(np.sum(kernel(x, observations)), sample_size)
 
         self.q_estimator = np.vectorize(__q_estimator)
-
-    # def __w_function_calculation(self) -> None:
-    #     """
-    #     Calculate the w function based on the known kernel to be used for the noise level estimation.
-    #     """
-    #     kernel: Callable = self.kernel
-    #
-    #     def kernel_integrand(x: float, y: float) -> np.float64:
-    #         return np.square(kernel(x, y))
-    #
-    #     def w_function(y: float) -> float:
-    #         return quad(kernel_integrand, self.lower, self.upper, args=y, limit=10000)[0]
-    #
-    #     self.__w_function = np.vectorize(w_function)
-    #
-    # @timer
-    # def estimate_delta_test(self):
-    #     """
-    #     Estimate noise level based on the observations and known kernel (via w function).
-    #     """
-    #     print('Estimating noise level...')
-    #     if self.transformed_measure:
-    #         self.delta = np.sqrt(np.divide(np.sum(np.square(1 - self.observations)), self.sample_size ** 2))
-    #     else:
-    #         self.__w_function_calculation()
-    #         self.delta = np.sqrt(np.divide(np.sum(self.__w_function(self.observations)), self.sample_size ** 2))
-    #     print('Estimated noise level: {}'.format(self.delta))
 
     @timer
     def estimate_delta(self):

@@ -54,7 +54,7 @@ class Landweber(EstimatorDiscretize, Operator):
         EstimatorDiscretize.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
         self.max_iter: int = kwargs.get('max_iter', 100)
         self.__tau: Union[float, int] = kwargs.get('tau', 1.)
-        assert isinstance(self.__tau, float) | isinstance(self.__tau, int), 'tau must be a number'
+        assert isinstance(self.__tau, (int, float)), 'tau must be a number'
         self.initial: cp.ndarray = kwargs.get('initial_guess',
                                               cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64))
         try:
@@ -67,8 +67,7 @@ class Landweber(EstimatorDiscretize, Operator):
         Operator.approximate(self)
         self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
         self.__relaxation: Union[float, int] = kwargs.get('relaxation', 2)
-        assert isinstance(self.__relaxation, float) | isinstance(self.__relaxation,
-                                                                 int), 'Relaxation parameter must be a number'
+        assert isinstance(self.__relaxation, (int, float)), 'Relaxation parameter must be a number'
         self.__relaxation = 0.5 / (np.max(np.linalg.svd(cp.asnumpy(self.KHK), compute_uv=False, hermitian=True)))
         EstimatorDiscretize.estimate_q(self)
         EstimatorDiscretize.estimate_delta(self)
@@ -211,7 +210,7 @@ class Tikhonov(EstimatorDiscretize, Operator):
         self.grid_max_iter: int = kwargs.get('grid_max_iter', 50)
         assert isinstance(self.grid_max_iter, int)
         self.__tau: Union[float, int] = kwargs.get('tau', 1.)
-        assert isinstance(self.__tau, float) | isinstance(self.__tau, int), 'tau must be a number'
+        assert isinstance(self.__tau, (int, float)), 'tau must be a number'
         self.__parameter_space_size: int = kwargs.get('parameter_space_size', 100)
         try:
             assert isinstance(self.__parameter_space_size, int)
@@ -405,7 +404,7 @@ class TSVD(EstimatorDiscretize, Operator):
         Operator.__init__(self, kernel, lower, upper, grid_size, adjoint, quadrature)
         EstimatorDiscretize.__init__(self, kernel, lower, upper, grid_size, observations, sample_size, quadrature)
         self.__tau: Union[float, int] = kwargs.get('tau', 1.)
-        assert isinstance(self.__tau, float) | isinstance(self.__tau, int), 'tau must be a number'
+        assert isinstance(self.__tau, (int, float)), 'tau must be a number'
         self.previous: cp.ndarray = cp.empty(self.grid_size, dtype=cp.float64)
         self.current: cp.ndarray = cp.empty(self.grid_size, dtype=cp.float64)
         Operator.approximate(self)

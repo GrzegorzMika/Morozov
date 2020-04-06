@@ -107,12 +107,12 @@ class LewisShedler(Generator):
         except ValueError:
             warn('Force vectorization of intensity function')
             self.intensity_function: Callable = np.vectorize(intensity_function)
-        assert isinstance(upper, float) | isinstance(upper, int), "Wrong type of upper limit!"
-        assert isinstance(lower, float) | isinstance(lower, int), "Wrong type of lower limit!"
+        assert isinstance(upper, (int, float)), "Wrong type of upper limit!"
+        assert isinstance(lower, (int, float)), "Wrong type of lower limit!"
         if lambda_hat is not None:
-            assert isinstance(lambda_hat, float) | isinstance(lambda_hat, int), "Wrong type of lambda_hat!"
+            assert isinstance(lambda_hat, (int, float)), "Wrong type of lambda_hat!"
         if seed is not None:
-            assert isinstance(seed, float) | isinstance(seed, int), "Wrong type of seed!"
+            assert isinstance(seed, (int, float)), "Wrong type of seed!"
         if np.sum(self.intensity_function(np.random.uniform(lower, upper, int(1e6))) < 0) > 0:
             raise ValueError("Intensity function must be greater than or equal to 0!")
         if lower >= upper:
@@ -272,46 +272,12 @@ class LSW(Generator):
             self.pdf = lambda x: pdf_tmp(x) / normalize
             self.pdf = np.vectorize(self.pdf)
 
-    # @vectorize(signature='(),()->()')
-    # def cdf(self, x: float) -> float:
-    #     """
-    #     Calculate the value of cumulative distribution function for given probability density function in given point.
-    #     :param x: Point in which the value of the cumulative distribution function is calculated.
-    #     :type x: float
-    #     :return: Value of the cumulative distribution function in point x.
-    #     """
-    #     if x < 0:
-    #         return 0.
-    #     elif x > 1:
-    #         return 1.
-    #     else:
-    #         return quad(self.pdf, 0, x)[0]
-    #
-    # @staticmethod
-    # def __solve(f: Callable) -> float:
-    #     """
-    #     Find the argument solving the equation f(x) = 0 in interval [0, 1].
-    #     :param f: Function for which the zero is to be found.
-    #     :type f: callable
-    #     :return: Root of function f.
-    #     """
-    #     return root_scalar(f, method='bisect', x0=0.5, bracket=[0, 1]).root
-
     def sample_r(self, method='rejection_numpy') -> None:
         """
         Sample the spheres radii according to the given probability density function.
         """
         if not self.inverse_transformation:
             sampler = getattr(SamplerMixin, method)
-            # cdf: Callable = self.cdf
-            # uniform: np.ndarray = np.random.uniform(0, 1, self.sample_size)
-            #
-            # def shift_fun(u: float) -> Callable:
-            #     return lambda x: cdf(x) - u
-            #
-            # shifted: Iterable = map(shift_fun, uniform)
-            # samples_map: Iterable = map(self.__solve, shifted)
-            # samples = np.fromiter(samples_map, dtype=np.float64, count=self.sample_size[0])
             samples = sampler(pdf=self.pdf, size=self.sample_size[0])
         else:
             samples: np.ndarray = getattr(np.random, self.pdf)(size=self.sample_size, **self.kwargs)
@@ -325,6 +291,10 @@ class LSW(Generator):
         self.z_sample = np.random.beta(a=2, b=1, size=self.sample_size)
 
     def generate(self) -> np.ndarray:
+        """
+        Generate a sample in Lord-Willis-Spektor problem with arbitrary probability density function for radii.
+        Returns: numpy array containing the sample.
+        """
         self.sample_r()
         self.sample_z()
         ind: np.ndarray = np.less_equal(self.z_sample, self.r_sample)
@@ -418,10 +388,10 @@ class CoxLewis(Generator):
         except ValueError:
             warn('Force vectorization of intensity function')
             self.mean_function: Callable = np.vectorize(mean_function)
-        assert isinstance(upper, float) | isinstance(upper, int), "Wrong type of upper limit!"
-        assert isinstance(lower, float) | isinstance(lower, int), "Wrong type of lower limit!"
+        assert isinstance(upper, (int, float)), "Wrong type of upper limit!"
+        assert isinstance(lower, (int, float)), "Wrong type of lower limit!"
         if seed is not None:
-            assert isinstance(seed, float) | isinstance(seed, int), "Wrong type of seed!"
+            assert isinstance(seed, (int, float)), "Wrong type of seed!"
         if np.sum(self.mean_function(np.random.uniform(lower, upper, int(1e6))) < 0) > 0:
             raise ValueError("Mean function must be greater than or equal to 0!")
         if lower >= upper:
