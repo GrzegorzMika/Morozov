@@ -61,14 +61,14 @@ class Landweber(EstimatorDiscretize, Operator):
             assert isinstance(self.initial, cp.ndarray)
         except AssertionError:
             warn('Initial guess is not a cupy array, falling back to default value', RuntimeWarning)
-            self.initial: cp.ndarray = cp.empty(self.grid_size, dtype=cp.float64)
+            self.initial: cp.ndarray = cp.repeat(cp.array([0]), self.grid_size).astype(cp.float64)
         self.previous: cp.ndarray = cp.empty(self.grid_size, dtype=cp.float64)
         self.current: cp.ndarray = cp.empty(self.grid_size, dtype=cp.float64)
         Operator.approximate(self)
         self.__KHK: cp.ndarray = self.__premultiplication(self.KH, self.K)
-        self.__relaxation: Union[float, int] = kwargs.get('relaxation', 2)
+        self.__relaxation: Union[float, int] = kwargs.get('relaxation', 0.5)
         assert isinstance(self.__relaxation, (int, float)), 'Relaxation parameter must be a number'
-        self.__relaxation = 0.5 / (np.max(np.linalg.svd(cp.asnumpy(self.KHK), compute_uv=False, hermitian=True)))
+        self.__relaxation = self.__relaxation / (np.max(np.linalg.svd(cp.asnumpy(self.KHK), compute_uv=False, hermitian=True)))
         EstimatorDiscretize.estimate_q(self)
         EstimatorDiscretize.estimate_delta(self)
         self.__grid: np.ndarray = getattr(super(), quadrature + '_grid')()

@@ -124,7 +124,7 @@ class TestFunctionalities:
         estimator.estimate()
         assert_almost_equal(cp.asnumpy(estimator.solution), np.repeat([0.59999999686], 100), decimal=6)
         estimator_tmp = TSVD(kernel=identity, lower=0, upper=1, grid_size=1000, observations=observations_random,
-                             sample_size=200, relaxation=10)
+                             sample_size=200)
         estimator_tmp.estimate()
         solution = np.load(os.path.join('test_files', 'solution_tsvd.npy'))
         assert_almost_equal(cp.asnumpy(estimator_tmp.solution), solution, decimal=12)
@@ -135,7 +135,7 @@ class TestFunctionalities:
             assert_equal(cp.asnumpy(estimator.solution), np.repeat([0], 100))
         estimator.observations = np.repeat([0], 40)
         estimator.refresh()
-        assert_equal(cp.asnumpy(estimator.solution), np.repeat([0], 100))
+        assert_equal(cp.asnumpy(estimator.solution), np.repeat([0.6], 100))
         assert_almost_equal(cp.asnumpy(estimator.q_estimator), np.repeat(4 / 5, 100), decimal=12)
 
 
