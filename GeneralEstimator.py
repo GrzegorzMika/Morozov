@@ -1,3 +1,4 @@
+import inspect
 from abc import abstractmethod, ABCMeta
 from typing import Callable, Union, Optional, List
 
@@ -208,10 +209,12 @@ class EstimatorSpectrum(EstimatorAbstract):
                 return quad(kernel_integrand, lower, upper, args=y, limit=10000)[0]
 
             @memory.cache
-            def delta_estimator_helper_nontransformed(observations: np.ndarray, sample_size: int) -> float:
+            def delta_estimator_helper_nontransformed(observations: np.ndarray, sample_size: int,
+                                                      kernel_formula: str) -> float:
                 return np.sqrt(np.divide(np.sum(w_function(observations)), sample_size ** 2))
 
-            self.delta = delta_estimator_helper_nontransformed(self.observations, self.sample_size)
+            self.delta = delta_estimator_helper_nontransformed(self.observations, self.sample_size,
+                                                               inspect.getsource(kernel).split('return')[1].strip())
         print('Estimated noise level: {}'.format(self.delta))
 
     def estimate(self, *args, **kwargs):
