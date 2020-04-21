@@ -1,0 +1,5 @@
+docker build -t tsvd -f Dockerfile_TSVD .
+docker build -t tsvd2 -f Dockerfile_TSVD2 .
+docker build -t test1tsvd -f Dockerfile_Test1_TSVD .
+docker build -t test1landweber -f Dockerfile_Test1_Landweber .
+docker build -t landweber -f Dockerfile_Landweber .

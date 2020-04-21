@@ -1,0 +1,9 @@
+docker build -t tikhonov1 -f Dockerfile_Tikhonov_tr1 .
+docker build -t tikhonov2 -f Dockerfile_Tikhonov_tr2 .
+docker build -t tikhonov3 -f Dockerfile_Tikhonov_tr3 .
+docker build -t tikhonov4 -f Dockerfile_Tikhonov_tr4 .
+
+docker run -d -v cachedir:/home/Morozov/cachedir tikhonov1:latest
+docker run -d -v cachedir:/home/Morozov/cachedir tikhonov2:latest
+docker run -d -v cachedir:/home/Morozov/cachedir tikhonov3:latest
+docker run -d -v cachedir:/home/Morozov/cachedir tikhonov4:latest

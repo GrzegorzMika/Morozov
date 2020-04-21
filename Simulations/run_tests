@@ -1,0 +1,5 @@
+docker run -d -v cachedir:/home/Morozov/cachedir tsvd:latest
+docker run -d -v cachedir:/home/Morozov/cachedir tsvd2:latest
+docker run -d -v cachedir:/home/Morozov/cachedir test1tsvd:latest
+docker run -d -v cachedir:/home/Morozov/cachedir test1landweber:latest
+docker run -d -v cachedir:/home/Morozov/cachedir landweber:latest

@@ -11,9 +11,9 @@ from Generator import LSW
 from SVD import LordWillisSpektor
 
 replications = 10
-size = [2000, 10000, 100000, 1000000]
+size = [1000000]
 max_size = 50
-max_iter = 30
+max_iter = 500
 functions = [BETA, NM, SMLA, SMLB]
 functions_name = ['BETA', 'NM', 'SMLA', 'SMLB']
 
@@ -25,13 +25,13 @@ if __name__ == '__main__':
                        'oracle_solution': []}
             for _ in range(replications):
                 try:
-                    spectrum = LordWillisSpektor(transformed_measure=False)
+                    spectrum = LordWillisSpektor(transformed_measure=True)
                     obs = generator.generate()
                     landweber = Landweber(kernel=kernel, singular_values=spectrum.singular_values,
                                           left_singular_functions=spectrum.left_functions,
-                                          right_singular_functions=spectrum.right_functions,
+                                          right_singular_functions=spectrum.right_functions, transformed_measure=True,
                                           observations=obs, sample_size=s, max_size=max_size, tau=1,
-                                          max_iter=max_iter)
+                                          max_iter=max_iter, njobs=-1)
                     landweber.estimate()
                     landweber.oracle(fun)
                     solution = list(landweber.solution(np.linspace(0, 1, 10000)))

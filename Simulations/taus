@@ -1,0 +1,7 @@
+docker build -t tsvd -f Dockerfile_TSVD .
+docker build -t tsvd2 -f Dockerfile_TSVD2 .
+docker build -t landweber -f Dockerfile_Landweber .
+
+docker run -d -v cachedir:/home/Morozov/cachedir tsvd:latest
+docker run -d -v cachedir:/home/Morozov/cachedir tsvd2:latest
+docker run -d -v cachedir:/home/Morozov/cachedir landweber:latest

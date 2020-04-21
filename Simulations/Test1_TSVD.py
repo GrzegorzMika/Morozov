@@ -11,7 +11,7 @@ from Generator import LSW
 from SVD import LordWillisSpektor
 
 replications = 10
-size = [2000, 10000, 100000, 1000000]
+size = [1000000]
 max_size = 10
 functions = [BETA, NM, SMLA, SMLB]
 functions_name = ['BETA', 'NM', 'SMLA', 'SMLB']
@@ -24,12 +24,12 @@ if __name__ == '__main__':
                        'oracle_solution': []}
             for _ in range(replications):
                 try:
-                    spectrum = LordWillisSpektor(transformed_measure=False)
+                    spectrum = LordWillisSpektor(transformed_measure=True)
                     obs = generator.generate()
                     tsvd = TSVD(kernel=kernel, singular_values=spectrum.singular_values,
                                 left_singular_functions=spectrum.left_functions,
-                                right_singular_functions=spectrum.right_functions,
-                                observations=obs, sample_size=s, max_size=max_size)
+                                right_singular_functions=spectrum.right_functions, transformed_measure=True,
+                                observations=obs, sample_size=s, max_size=max_size, njobs=-1)
                     tsvd.estimate()
                     tsvd.oracle(fun)
                     solution = list(tsvd.solution(np.linspace(0, 1, 10000)))
