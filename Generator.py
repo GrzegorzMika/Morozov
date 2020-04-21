@@ -380,7 +380,7 @@ class CoxLewis(Generator):
         :type seed: float (default: None)
         """
         super().__init__()
-
+        np.random.seed(seed)
         assert callable(mean_function), "intensity_function must be a callable!"
         try:
             mean_function(np.array([1, 2]))
@@ -400,7 +400,6 @@ class CoxLewis(Generator):
         self.upper: Union[float, int] = upper
         self.scaler: Union[float, int] = mean_function(upper)
         self.sample_size: np.ndarray = np.random.poisson(lam=self.scaler * sample_size, size=1)
-        np.random.seed(seed)
 
     @vectorize(signature='(),()->()')
     def scaled_mean_function(self, x):
