@@ -286,7 +286,9 @@ class LSW(Generator):
     def sample_z(self) -> None:
         """
         Sample the distance according to the Beta(2, 1) distribution as described in B. Ćmiel, "Estymatory falkowe w
-        problemach odwrotnych dla procesów Poissona", PhD thesis, AGH University of Science and Technology in Cracow, 2013.
+        problemach odwrotnych dla procesów Poissona", PhD thesis, AGH University of Science and Technology in Cracow, 2013
+        and  B. Ćmiel, "Poisson intensity estimation for the Spektor–Lord–Willis problem using a wavelet shrinkage approach",
+        Journal of Multivariate Analysis, 112 (2012) 194–206.
         """
         self.z_sample = np.random.beta(a=2, b=1, size=self.sample_size)
 
