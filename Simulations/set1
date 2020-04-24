@@ -1,0 +1,15 @@
+docker build -t bm1 -f Dockerfile_bm1 .
+docker build -t bm2 -f Dockerfile_bm2 .
+docker build -t increasing -f Dockerfile_increasing .
+docker build -t step -f Dockerfile_step .
+docker build -t triangular -f Dockerfile_triangular .
+docker build -t uniform -f Dockerfile_uniform .
+docker build -t bimodal -f Dockerfile_bimodal .
+
+docker run -d -v cachedir:/home/Morozov/cachedir bm1:latest
+docker run -d -v cachedir:/home/Morozov/cachedir bm2:latest
+docker run -d -v cachedir:/home/Morozov/cachedir increasing:latest
+docker run -d -v cachedir:/home/Morozov/cachedir step:latest
+docker run -d -v cachedir:/home/Morozov/cachedir triangular:latest
+docker run -d -v cachedir:/home/Morozov/cachedir uniform:latest
+docker run -d -v cachedir:/home/Morozov/cachedir bimodal:latest

@@ -13,3 +13,4 @@ dask-worker-space/*
 /test/
 /.test/
 /Simulations/*.csv
+/Old/

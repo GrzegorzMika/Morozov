@@ -43,6 +43,36 @@ def BIMODAL(x):
     return np.add(np.where(x <= 0.8, 28125 / 512 * x ** 2 * (0.8 - x) ** 2, 0),
                   np.where(x >= 0.6, 9375 / 8 * (0.6 - x) ** 2 * (1 - x) ** 2, 0))
 
+def BM1(x):
+    """
+    J. Wojdyła, Z. Szkutnik, "Nonparamteric confidence bands in Wicksell's problem", Statistica Sinica28(2018), 93-113
+    """
+    return 0.55 * 252  * (1-x)**6*x**2 + 0.45 * 252 * (1-x)**2 * x**6
+
+def BM2(x):
+    """
+    J. Wojdyła, Z. Szkutnik, "Nonparamteric confidence bands in Wicksell's problem", Statistica Sinica28(2018), 93-113
+    """
+    return 0.45 * 111384 * (1-x)**12*x**5 + 0.55 * 2558160 * (1-x)**7 * x**14
+
+def INCREASING(x):
+    """
+    Linearly increasing function over interval [0, 1].
+    """
+    return 2*x
+
+def UNIFORMS(x):
+    """
+    Uniform distribution over [0, 1] interval.
+    """
+    return np.ones_like(np.array(x))
+
+def TRIANGULAR(x):
+    """
+    Triangular probability distribution function over interval [0, 1].
+    """
+    return np.where(x <= 0.5, 4*x, 4*(1-x))
+
 
 def STEP(x):
     """

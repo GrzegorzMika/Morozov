@@ -9,12 +9,12 @@ RUN mkdir /home/Morozov
 
 WORKDIR /home/Morozov
 
-COPY . .
-COPY secretgc_ip.json /home/Morozov
+COPY .. .
+COPY ../secretgc_ip.json /home/Morozov
 
 RUN pip3 install -r ./requirements.txt
 
 RUN pip3 install dask distributed --upgrade
 
-CMD python3 Tikhonov_tr2.py && python3 -c "from utils import upload; upload()"
+CMD python3 Test1_Tikhonov.py && python3 -c "from utils import upload; upload()"
 

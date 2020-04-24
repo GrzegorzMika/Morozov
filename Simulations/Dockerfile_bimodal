@@ -14,5 +14,4 @@ RUN mkdir /home/Morozov/cachedir
 
 COPY . .
 
-CMD python3 TestOfTests.py && python3 -c "from utils import upload; upload()"
-
+CMD python3 Bimodal.py && python3 -c "from utils import upload; upload()"
