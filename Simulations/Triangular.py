@@ -13,7 +13,7 @@ from SVD import LordWillisSpektor
 replications = 10
 size = [2000, 10000, 100000, 1000000]
 max_size = 50
-max_iter = 100
+max_iter = 1000
 functions = [TRIANGULAR]
 functions_name = ['TRIANGULAR']
 

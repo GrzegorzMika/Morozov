@@ -6,10 +6,10 @@ docker build -t triangular -f Dockerfile_triangular .
 docker build -t uniform -f Dockerfile_uniform .
 docker build -t bimodal -f Dockerfile_bimodal .
 
-docker run -d -v cachedir:/home/Morozov/cachedir bm1:latest
-docker run -d -v cachedir:/home/Morozov/cachedir bm2:latest
-docker run -d -v cachedir:/home/Morozov/cachedir increasing:latest
-docker run -d -v cachedir:/home/Morozov/cachedir step:latest
-docker run -d -v cachedir:/home/Morozov/cachedir triangular:latest
-docker run -d -v cachedir:/home/Morozov/cachedir uniform:latest
-docker run -d -v cachedir:/home/Morozov/cachedir bimodal:latest
+docker run -d -v cachedir:/home/Morozov/cachedir --security-opt seccomp=unconfined bm1:latest
+docker run -d -v cachedir:/home/Morozov/cachedir --security-opt seccomp=unconfined bm2:latest
+docker run -d -v cachedir:/home/Morozov/cachedir --security-opt seccomp=unconfined increasing:latest
+docker run -d -v cachedir:/home/Morozov/cachedir --security-opt seccomp=unconfined step:latest
+docker run -d -v cachedir:/home/Morozov/cachedir --security-opt seccomp=unconfined triangular:latest
+docker run -d -v cachedir:/home/Morozov/cachedir --security-opt seccomp=unconfined uniform:latest
+docker run -d -v cachedir:/home/Morozov/cachedir --security-opt seccomp=unconfined bimodal:latest

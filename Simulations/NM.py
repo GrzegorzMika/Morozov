@@ -3,7 +3,7 @@ from os import path
 
 import numpy as np
 import pandas as pd
-from test_functions import kernel_transformed, BIMODAL
+from test_functions import kernel_transformed, NM
 
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 from EstimatorSpectrum import Landweber
@@ -14,8 +14,8 @@ replications = 10
 size = [2000, 10000, 100000, 1000000]
 max_size = 50
 max_iter = 1000
-functions = [BIMODAL]
-functions_name = ['BIMODAL']
+functions = [NM]
+functions_name = ['NM']
 
 if __name__ == '__main__':
     for s in size:

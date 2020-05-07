@@ -57,11 +57,18 @@ class SamplerMixin:
         c = -minimize_scalar(lambda x: -pdf(x), bounds=(0, 1), method='bounded', tol=1e-10).fun
         max_size = upper_bound * int(c) * size
         notready = True
+        u1 = np.random.uniform(0, 1, max_size)
+        u2 = np.random.uniform(0, 1, max_size)
+        pdf_sample = pdf(u1) / c
+        sample = u1[np.less_equal(u2, pdf_sample)]
+        if sample.shape[0] >= size:
+            notready = False
         while notready:
             u1 = np.random.uniform(0, 1, max_size)
             u2 = np.random.uniform(0, 1, max_size)
             pdf_sample = pdf(u1) / c
-            sample = u1[np.less_equal(u2, pdf_sample)]
+            sample_tmp = u1[np.less_equal(u2, pdf_sample)]
+            sample = np.concatenate([sample, sample_tmp])
             if sample.shape[0] >= size:
                 notready = False
         return sample[:size]

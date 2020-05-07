@@ -3,7 +3,7 @@ from os import path
 
 import numpy as np
 import pandas as pd
-from test_functions import kernel_transformed, BIMODAL
+from test_functions import kernel_transformed, BETA
 
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 from EstimatorSpectrum import Landweber
@@ -11,11 +11,11 @@ from Generator import LSW
 from SVD import LordWillisSpektor
 
 replications = 10
-size = [2000, 10000, 100000, 1000000]
+size = [2002, 10002]
 max_size = 50
 max_iter = 1000
-functions = [BIMODAL]
-functions_name = ['BIMODAL']
+functions = [BETA]
+functions_name = ['BETA']
 
 if __name__ == '__main__':
     for s in size:
@@ -30,7 +30,7 @@ if __name__ == '__main__':
                     landweber = Landweber(kernel=kernel_transformed, singular_values=spectrum.singular_values,
                                           left_singular_functions=spectrum.left_functions,
                                           right_singular_functions=spectrum.right_functions,
-                                          observations=obs, sample_size=s, max_size=max_size, tau=1.2,
+                                          observations=obs, sample_size=s, max_size=max_size, tau=1.1,
                                           max_iter=max_iter, transformed_measure=True, njobs=12)
                     landweber.estimate()
                     landweber.oracle(fun)
