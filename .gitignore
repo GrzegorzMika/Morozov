@@ -15,3 +15,5 @@ secretgc_ip.json
 /test/
 /.test/
 /Simulations/cachedir/
+/Plots/
+/Plots/.ipynb_checkpoints/
