@@ -167,7 +167,7 @@ class TSVD(EstimatorSpectrum):
         pass
 
     @timer
-    def oracle(self, true: Callable, patience: int = 1) -> None:
+    def oracle(self, true: Callable, patience: int = 3) -> None:
         """
         Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
         :param true: True solution.
@@ -363,7 +363,7 @@ class Tikhonov(EstimatorSpectrum):
         self.__find_fourier_coeffs()
         self.estimate_delta()
 
-        for alpha in np.flip(np.linspace(0, 3, 1000)):  # warm start required
+        for alpha in np.flip(np.linspace(0, 0.1, 500)):  # warm start required
             residual = np.sqrt(np.sum(np.multiply(np.square(
                 np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha, self.order),
                                         np.square(self.sigmas)),
@@ -390,7 +390,7 @@ class Tikhonov(EstimatorSpectrum):
         pass
 
     @timer
-    def oracle(self, true: Callable, patience: int = 1) -> None:
+    def oracle(self, true: Callable, patience: int = 3) -> None:
         """
         Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
         :param true: True solution.
@@ -406,7 +406,7 @@ class Tikhonov(EstimatorSpectrum):
         def residual(solution):
             return lambda x: np.square(true(x) - solution(x))
 
-        for alpha in np.flip(np.linspace(0, 3, 1000)):
+        for alpha in np.flip(np.linspace(0, 0.1, 500)):
             parameters.append(alpha)
 
             if self.transformed_measure:
@@ -623,7 +623,7 @@ class Landweber(EstimatorSpectrum):
         pass
 
     @timer
-    def oracle(self, true: Callable, patience: int = 1) -> None:
+    def oracle(self, true: Callable, patience: int = 3) -> None:
         """
         Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
         :param true: True solution.

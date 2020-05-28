@@ -28,7 +28,7 @@ class TSVD(EstimatorSpectrum):
         :type observations: numpy.ndarray
         :param sample_size: Theoretical sample size (n).
         :type sample_size: int
-        :param transformed_measure: To performed the calculations with respect to the ttransformed measure xdx (True) or
+        :param transformed_measure: To performed the calculations with respect to the transformed measure xdx (True) or
         to stay with Lebesgue measure dx (False)
         :type transformed_measure: boolean (default: False)
         :param lower: Lower end of the interval on which the operator is defined.
@@ -234,7 +234,7 @@ class Tikhonov(EstimatorSpectrum):
         :type observations: numpy.ndarray
         :param sample_size: Theoretical sample size (n).
         :type sample_size: int
-        :param transformed_measure: To performed the calculations with respect to the ttransformed measure xdx (True) or
+        :param transformed_measure: To performed the calculations with respect to the transformed measure xdx (True) or
         to stay with Lebesgue measure dx (False)
         :type transformed_measure: boolean (default: False)
         :param lower: Lower end of the interval on which the operator is defined.
@@ -363,7 +363,7 @@ class Tikhonov(EstimatorSpectrum):
         self.__find_fourier_coeffs()
         self.estimate_delta()
 
-        for alpha in np.flip(np.linspace(0, 3, 1000)):  # warm start required
+        for alpha in np.flip(np.linspace(0, 3, 1000)): 
             residual = np.sqrt(np.sum(np.multiply(np.square(
                 np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha, self.order),
                                         np.square(self.sigmas)),
@@ -457,7 +457,7 @@ class Landweber(EstimatorSpectrum):
         :type observations: numpy.ndarray
         :param sample_size: Theoretical sample size (n).
         :type sample_size: int
-        :param transformed_measure: To performed the calculations with respect to the ttransformed measure xdx (True) or
+        :param transformed_measure: To performed the calculations with respect to the transformed measure xdx (True) or
         to stay with Lebesgue measure dx (False)
         :type transformed_measure: boolean (default: False)
         :param lower: Lower end of the interval on which the operator is defined.

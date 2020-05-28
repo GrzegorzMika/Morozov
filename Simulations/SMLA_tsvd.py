@@ -35,7 +35,7 @@ if __name__ == '__main__':
                                          observations=obs, sample_size=s, max_size=max_size, tau=tau,
                                          transformed_measure=True, njobs=-1)
                         landweber.estimate()
-                        landweber.oracle(fun)
+                        landweber.oracle(fun, patience=10)
                         solution = list(landweber.solution(np.linspace(0, 1, 10000)))
                         results['selected_param'].append(landweber.regularization_param)
                         results['oracle_param'].append(landweber.oracle_param)

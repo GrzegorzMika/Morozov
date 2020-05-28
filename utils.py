@@ -16,7 +16,8 @@ def find(name, path):
 def download():
     storage_client = storage.Client.from_service_account_json(find('secretgc_ip.json', '/home'))
 
-    files = os.listdir('./Simulations')
+    # files = os.listdir('./Simulations') + os.listdir('./Simulations/final')
+    files = os.listdir('./Simulations/final')
 
     blobs = storage_client.list_blobs('ip-free')
     for blob in tqdm(blobs):
@@ -49,6 +50,9 @@ def plot_results(file_name, true, plot_lim):
 
     if not os.path.exists('Plots'):
         os.mkdir('Plots')
+        os.mkdir('Plots/loss')
+        os.mkdir('Plots/plot')
+    
 
     data = pd.read_csv(os.path.join('Simulations', 'final', file_name))
     data = data.sort_values(by='loss').reset_index(drop=True)
@@ -64,12 +68,13 @@ def plot_results(file_name, true, plot_lim):
     plt.plot(np.linspace(0, 1, 10000), worst, ':', c='#ae2c87', label='worst')
     plt.plot(np.linspace(0, 1, 10000), best, '--', c='#4378bf', label='best')
     plt.ylim(-0.1, plot_lim[0])
-    plt.legend(loc='upper left', prop={'size': 12})
+    plt.legend(loc='upper left', prop={'size': 14})
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     plot_name = file_name.split('.')[0] + '.png'
-    plt.savefig(os.path.join('./Plots', plot_name))
+    plt.savefig(os.path.join('./Plots/plot', plot_name))
     plt.clf()
+    plt.close()
 
     plt.rcParams['figure.figsize'] = 7, 7
     plt.style.use('seaborn-white')
@@ -81,5 +86,6 @@ def plot_results(file_name, true, plot_lim):
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     plot_name = file_name.split('.')[0] + '_loss.png'
-    plt.savefig(os.path.join('./Plots', plot_name))
+    plt.savefig(os.path.join('./Plots/loss', plot_name))
     plt.clf()
+    plt.close()

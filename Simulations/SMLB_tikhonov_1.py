@@ -13,7 +13,7 @@ from SVD import LordWillisSpektor
 replications = 10
 size = [1000000]
 max_size = 50
-order = 2
+order = 1
 functions = [SMLB]
 functions_name = ['SMLB']
 taus = [1.]
@@ -36,7 +36,7 @@ if __name__ == '__main__':
                                              observations=obs, sample_size=s, max_size=max_size, tau=tau,
                                              order=order, transformed_measure=True, njobs=-1)
                         landweber.estimate()
-                        landweber.oracle(fun, patience=10)
+                        landweber.oracle(fun)
                         solution = list(landweber.solution(np.linspace(0, 1, 10000)))
                         results['selected_param'].append(landweber.regularization_param)
                         results['oracle_param'].append(landweber.oracle_param)
@@ -47,4 +47,4 @@ if __name__ == '__main__':
                         landweber.client.close()
                     except:
                         pass
-                pd.DataFrame(results).to_csv('Tikhonov_{}_{}_tau_{}.csv'.format(functions_name[i], s, taus_name[j]))
+                pd.DataFrame(results).to_csv('Tikhonov1times_{}_{}_tau_{}.csv'.format(functions_name[i], s, taus_name[j]))
