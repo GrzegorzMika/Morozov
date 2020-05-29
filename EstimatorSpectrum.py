@@ -1,14 +1,19 @@
+import inspect
 from multiprocessing import cpu_count
 from typing import Callable, Optional, Generator, Iterable
 from warnings import warn
 
 import numpy as np
 from dask.distributed import Client
+from joblib import Memory
 from numba import njit
 from scipy.integrate import quad
 
 from GeneralEstimator import EstimatorSpectrum
 from decorators import timer
+
+location = './cachedir'
+memory = Memory(location, verbose=0, bytes_limit=1024 * 1024 * 1024)
 
 
 class TSVD(EstimatorSpectrum):
@@ -88,6 +93,7 @@ class TSVD(EstimatorSpectrum):
         q_estimator: Callable = self.q_estimator
         lower: float = self.lower
         upper: float = self.upper
+        client = self.client
 
         if self.transformed_measure:
             def product(function: Callable) -> Callable:
@@ -101,11 +107,14 @@ class TSVD(EstimatorSpectrum):
 
         products: Iterable = map(product, self.vs)
 
-        futures = []
-        for i, fun in enumerate(products):
-            futures.append(self.client.submit(integrate, fun))
-        coeffs = self.client.gather(futures)
+        @memory.cache
+        def fourier_coeffs_helper_TSVD(observations: np.ndarray, kernel_function: str):
+            futures = []
+            for i, fun in enumerate(products):
+                futures.append(client.submit(integrate, fun))
+            return client.gather(futures)
 
+        coeffs = fourier_coeffs_helper_TSVD(self.observations, inspect.getsource(self.kernel).split('return')[1].strip())
         self.q_fourier_coeffs = np.array(coeffs)
 
     def __singular_values(self) -> None:
@@ -308,6 +317,7 @@ class Tikhonov(EstimatorSpectrum):
         q_estimator: Callable = self.q_estimator
         lower: float = self.lower
         upper: float = self.upper
+        client = self.client
 
         if self.transformed_measure:
             def product(function: Callable) -> Callable:
@@ -321,11 +331,14 @@ class Tikhonov(EstimatorSpectrum):
 
         products: Iterable = map(product, self.vs)
 
-        futures = []
-        for i, fun in enumerate(products):
-            futures.append(self.client.submit(integrate, fun))
-        coeffs = self.client.gather(futures)
+        @memory.cache
+        def fourier_coeffs_helper_Tikhonov(observations: np.ndarray, kernel_function: str):
+            futures = []
+            for i, fun in enumerate(products):
+                futures.append(client.submit(integrate, fun))
+            return client.gather(futures)
 
+        coeffs = fourier_coeffs_helper_Tikhonov(self.observations, inspect.getsource(self.kernel).split('return')[1].strip())
         self.q_fourier_coeffs = np.array(coeffs)
 
     def __singular_values(self) -> None:
@@ -537,6 +550,7 @@ class Landweber(EstimatorSpectrum):
         q_estimator: Callable = self.q_estimator
         lower: float = self.lower
         upper: float = self.upper
+        client = self.client
 
         if self.transformed_measure:
             def product(function: Callable) -> Callable:
@@ -550,11 +564,14 @@ class Landweber(EstimatorSpectrum):
 
         products: Iterable = map(product, self.vs)
 
-        futures = []
-        for i, fun in enumerate(products):
-            futures.append(self.client.submit(integrate, fun))
-        coeffs = self.client.gather(futures)
+        @memory.cache
+        def fourier_coeffs_helper_Landweber(observations: np.ndarray, kernel_function: str):
+            futures = []
+            for i, fun in enumerate(products):
+                futures.append(client.submit(integrate, fun))
+            return client.gather(futures)
 
+        coeffs = fourier_coeffs_helper_Landweber(self.observations, inspect.getsource(self.kernel).split('return')[1].strip())
         self.q_fourier_coeffs = np.array(coeffs)
 
     def __singular_values(self) -> None:
