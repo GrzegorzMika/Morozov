@@ -7,7 +7,7 @@ from decorators import vectorize, timer
 
 
 class Quadrature:
-    def __init__(self, lower: Union[int, float], upper: Union[int, float], grid_size: int):
+    def __init__(self, lower: float, upper: float, grid_size: int):
         """
         Functionality to calculate weights in different quadrature schema.
         Availiable quadratures: `
@@ -70,7 +70,7 @@ class Quadrature:
 
 
 class Operator(Quadrature):
-    def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
+    def __init__(self, kernel: Callable, lower: float, upper: float, grid_size: int,
                  adjoint: bool = False, quadrature: str = 'rectangle'):
         """
         Build an approximation of integral operator with given kernel on equal grid.

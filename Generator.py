@@ -164,8 +164,8 @@ class LewisShedler(Generator):
         :return: numpy array containing the simulated values of inhomogeneous process.
         """
         warnings.warn('You are using not optimized version of algorithm', RuntimeWarning)
-        t: List[Union[Union[int, float], Any]] = []
-        s: List[Union[Union[int, float], Any]] = []
+        t: List[Union[float, Any]] = []
+        s: List[Union[float, Any]] = []
         t.append(0)
         s.append(0)
         while s[-1] < (self.upper - self.lower):
@@ -375,7 +375,7 @@ class LSW(Generator):
 
 
 class CoxLewis(Generator):
-    def __init__(self, mean_function: Callable, lower: Union[float, int], upper: Union[float, int],
+    def __init__(self, mean_function: Callable, lower: float, upper: float,
                  sample_size: int, seed: Optional[float] = None):
         """
         Generator of observations from inhomogeneous Poisson process using Cox- Lewis algorithm.
@@ -405,9 +405,9 @@ class CoxLewis(Generator):
             raise ValueError("Mean function must be greater than or equal to 0!")
         if lower >= upper:
             raise ValueError("Wrong interval is specified! (lower {} >= upper {})".format(lower, upper))
-        self.lower: Union[float, int] = lower
-        self.upper: Union[float, int] = upper
-        self.scaler: Union[float, int] = mean_function(upper)
+        self.lower: float = lower
+        self.upper: float = upper
+        self.scaler: float = mean_function(upper)
         self.sample_size: np.ndarray = np.random.poisson(lam=self.scaler * sample_size, size=1)
 
     @vectorize(signature='(),()->()')

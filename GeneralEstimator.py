@@ -1,13 +1,11 @@
 import inspect
 from abc import abstractmethod, ABCMeta
-from typing import Callable, Union, Optional, List
-
-from joblib import Memory
-
-import cupy as cp
+from typing import Callable, Optional, List
 from warnings import warn
 
+import cupy as cp
 import numpy as np
+from joblib import Memory
 from scipy.integrate import quad
 
 from Operator import Quadrature
@@ -36,7 +34,7 @@ class EstimatorAbstract(metaclass=ABCMeta):
 
 
 class EstimatorDiscretize(EstimatorAbstract, Quadrature):
-    def __init__(self, kernel: Callable, lower: Union[float, int], upper: Union[float, int], grid_size: int,
+    def __init__(self, kernel: Callable, lower: float, upper: float, grid_size: int,
                  observations: np.ndarray, sample_size: int, quadrature: str = 'rectangle'):
         Quadrature.__init__(self, lower, upper, grid_size)
         try:
@@ -134,7 +132,7 @@ class EstimatorDiscretize(EstimatorAbstract, Quadrature):
 
 class EstimatorSpectrum(EstimatorAbstract):
     def __init__(self, kernel: Callable, observations: np.ndarray, sample_size: int, transformed_measure: bool,
-                 lower: Union[float, int] = 0, upper: Union[float, int] = 1):
+                 lower: float = 0, upper: float = 1):
         assert isinstance(transformed_measure, bool), 'Please provide an information about measure transformation as ' \
                                                       'True or False'
         self.transformed_measure = transformed_measure
@@ -147,10 +145,10 @@ class EstimatorSpectrum(EstimatorAbstract):
             self.kernel: Callable = np.vectorize(kernel)
         assert isinstance(lower, (int, float)), 'Lower bound for integration interval must be a number, but ' \
                                                 'was {} provided'.format(lower)
-        self.lower: Union[float, int] = lower
+        self.lower: float = lower
         assert isinstance(upper, (int, float)), 'Upper bound for integration interval must be a number, but' \
                                                 ' was {} provided'.format(upper)
-        self.upper: Union[float, int] = upper
+        self.upper: float = upper
         assert isinstance(observations, np.ndarray), 'Please provide the observations in a form of numpy array'
         self.__observations: np.ndarray = observations
         assert isinstance(sample_size, int), 'Sample size must be an integer, but was {} provided'.format(sample_size)
@@ -178,11 +176,11 @@ class EstimatorSpectrum(EstimatorAbstract):
         sample_size: int = self.sample_size
 
         if self.transformed_measure:
-            def __q_estimator(x: Union[float, int]) -> np.float64:
+            def __q_estimator(x: float) -> np.float64:
                 x: np.ndarray = np.repeat(x, observations.shape[0])
                 return np.divide(np.multiply(2, np.sum(np.less(observations, x))), sample_size)
         else:
-            def __q_estimator(x: Union[float, int]) -> np.float64:
+            def __q_estimator(x: float) -> np.float64:
                 x: np.ndarray = np.repeat(x, observations.shape[0])
                 return np.divide(np.sum(kernel(x, observations)), sample_size)
 
