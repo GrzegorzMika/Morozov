@@ -14,7 +14,7 @@ functions = [BETA]
 functions_name = ['BETA']
 taus = [i for i in range(1, 1000, 5)]
 taus_name = [str(t) for t in taus]
-rhos = [e ** i for i in range(-5, 15)]
+rhos = [2 ** i for i in range(-5, 15)]
 rhos_name = [str(r)[:10] for r in rhos]
 
 if __name__ == '__main__':
