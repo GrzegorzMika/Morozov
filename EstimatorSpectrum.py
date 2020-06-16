@@ -177,12 +177,12 @@ class TSVD(EstimatorSpectrum):
         pass
 
     @timer
-    def oracle(self, true: Callable, patience: int = 3) -> None:
+    def oracle(self, true: Callable, patience: int = 10) -> None:
         """
         Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
         :param true: True solution.
         :param patience: Number of consecutive iterations to observe the loss behavior after the minimum was found to
-        prevent to stack in local minimum (default: 3).
+        prevent to stack in local minimum (default: 10).
         """
         losses = []
         parameters = []
@@ -404,12 +404,12 @@ class Tikhonov(EstimatorSpectrum):
         pass
 
     @timer
-    def oracle(self, true: Callable, patience: int = 1) -> None:
+    def oracle(self, true: Callable, patience: int = 10) -> None:
         """
         Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
         :param true: True solution.
         :param patience: Number of consecutive iterations to observe the loss behavior after the minimum was found to
-        prevent to stack in local minimum (default: 3).
+        prevent to stack in local minimum (default: 10).
         """
         losses = []
         parameters = []
@@ -641,12 +641,12 @@ class Landweber(EstimatorSpectrum):
         pass
 
     @timer
-    def oracle(self, true: Callable, patience: int = 1) -> None:
+    def oracle(self, true: Callable, patience: int = 10) -> None:
         """
         Find the oracle regularization parameter which minimizes the L2 norm and knowing the true solution.
         :param true: True solution.
         :param patience: Number of consecutive iterations to observe the loss behavior after the minimum was found to
-        prevent to stack in local minimum (default: 3).
+        prevent to stack in local minimum (default: 10).
         """
         losses = []
         parameters = []
