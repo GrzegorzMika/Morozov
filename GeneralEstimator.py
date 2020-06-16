@@ -83,9 +83,9 @@ class EstimatorSpectrum(EstimatorAbstract):
 
             @memory.cache
             def delta_transformed(observations: np.ndarray, sample_size: int, rho: float, kernel_formula: str) -> float:
-                constant = 4 * observations.shape[0] * (1 - rho * np.log(1 * rho)) / sample_size ** 2
-                summand = np.sort(rho * np.log(1 + observations) - observations, kind='heapsort')
-                return constant * 4 * np.divide(np.sum(summand), sample_size ** 2)
+                constant = 4 * observations.shape[0] * (1 - rho * np.log(1 + rho)) / (sample_size ** 2)
+                summand = np.sort(rho * np.log(rho + observations) - observations, kind='heapsort')
+                return constant + 4 * np.divide(np.sum(summand), sample_size ** 2)
 
             self.delta = delta_transformed(observations, sample_size, rho, inspect.getsource(kernel))
         else:
