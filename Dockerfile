@@ -12,4 +12,4 @@ RUN mkdir /home/Morozov/cachedir
 
 COPY . .
 
-CMD python3 Beta.py && python3 -c "from utils import upload; upload()"
+CMD python3 simulation.py && python3 -c "from utils import upload; upload()"
