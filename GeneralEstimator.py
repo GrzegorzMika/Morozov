@@ -59,12 +59,12 @@ class EstimatorSpectrum(EstimatorAbstract):
         if self.transformed_measure:
             def __q_estimator(x: float) -> np.float64:
                 x: np.ndarray = np.repeat(x, observations.shape[0])
-                return np.divide(np.multiply(2, np.sum(np.less(observations, x))), sample_size)
+                return np.divide(np.multiply(2, np.sum(np.less_equal(observations, x))), sample_size)
         else:
             def __q_estimator(x: float) -> np.float64:
                 x: np.ndarray = np.repeat(x, observations.shape[0])
                 return np.divide(np.multiply(2, np.sum(
-                    np.sort(np.multiply(observations, np.less(observations, x)), kind='heapsort'))), sample_size)
+                    np.sort(np.multiply(observations, np.less_equal(observations, x)), kind='heapsort'))), sample_size)
 
         self.q_estimator = np.vectorize(__q_estimator)
 
