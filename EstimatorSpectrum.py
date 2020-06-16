@@ -1,6 +1,6 @@
 import inspect
 from multiprocessing import cpu_count
-from typing import Callable, Optional, Generator, Iterable
+from typing import Callable, Optional, Generator, Iterable, Union
 
 import numpy as np
 from dask.distributed import Client
@@ -19,8 +19,8 @@ memory = Memory(location, verbose=0, bytes_limit=1024 * 1024 * 1024)
 class TSVD(EstimatorSpectrum):
     def __init__(self, kernel: Callable, singular_values: Generator, left_singular_functions: Generator,
                  right_singular_functions: Generator, observations: np.ndarray, sample_size: int,
-                 transformed_measure: bool, rho: float, lower: float = 0, upper: float = 1, tau: float = 1,
-                 max_size: int = 100, njobs: Optional[int] = -1):
+                 transformed_measure: bool, rho: Union[int, float], lower: Union[int, float] = 0,
+                 upper: Union[int, float] = 1, tau: Union[int, float] = 1, max_size: int = 100, njobs: Optional[int] = -1):
         """
         Instance of TSVD solver for inverse problem in Poisson noise with known spectral decomposition.
         :param kernel: Kernel of the integral operator.
@@ -39,13 +39,13 @@ class TSVD(EstimatorSpectrum):
         to stay with Lebesgue measure dx (False)
         :type transformed_measure: boolean
         :param rho: Weight strength in discrepancy equation.
-        :type rho: float
+        :type rho: Union[int, float]
         :param lower: Lower end of the interval on which the operator is defined.
-        :type lower: float
+        :type lower: Union[int, float]
         :param upper: Upper end of the interval on which the operator is defined.
-        :type lower: float
+        :type upper: Union[int, float]
         :param tau: Parameter used to rescale the obtained values of estimated noise level.
-        :type tau: float (default 1)
+        :type tau: Union[int, float] (default 1)
         :param max_size: Maximum number of functions included in Fourier expansion.
         :type max_size: int (default 100)
         :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
@@ -60,9 +60,9 @@ class TSVD(EstimatorSpectrum):
         self.right_singular_functions: Generator = right_singular_functions
         self.observations: np.ndarray = observations
         self.sample_size: int = sample_size
-        self.lower: float = lower
-        self.upper: float = upper
-        self.tau: float = tau
+        self.lower: Union[int, float] = lower
+        self.upper: Union[int, float] = upper
+        self.tau: Union[int, float] = tau
         self.max_size: int = max_size
         self.q_fourier_coeffs: np.ndarray = np.repeat([0.], self.max_size)
         self.sigmas: np.ndarray = np.repeat([0.], self.max_size)
@@ -87,9 +87,9 @@ class TSVD(EstimatorSpectrum):
         """
         self.estimate_q()
         print('Calculation of Fourier coefficients of q estimator...')
-        q_estimator: Callable = self.q_estimator
-        lower: float = self.lower
-        upper: float = self.upper
+        q_estimator = self.q_estimator
+        lower = self.lower
+        upper = self.upper
         client = self.client
 
         if self.transformed_measure:
@@ -118,7 +118,7 @@ class TSVD(EstimatorSpectrum):
         """
         Collect a max_size number of singular values.
         """
-        sigma: list = [next(self.singular_values) for _ in range(self.max_size)]
+        sigma = [next(self.singular_values) for _ in range(self.max_size)]
         self.sigmas = np.array(sigma)
 
     def __singular_functions(self) -> None:
@@ -226,8 +226,8 @@ class TSVD(EstimatorSpectrum):
 class Tikhonov(EstimatorSpectrum):
     def __init__(self, kernel: Callable, singular_values: Generator, left_singular_functions: Generator,
                  right_singular_functions: Generator, observations: np.ndarray, sample_size: int,
-                 transformed_measure: bool, rho: float, order: int = 2, lower: float = 0, upper: float = 1,
-                 tau: float = 1, max_size: int = 100, njobs: Optional[int] = -1):
+                 transformed_measure: bool, rho: Union[int, float], order: int = 2, lower: Union[int, float] = 0,
+                 upper: Union[int, float] = 1, tau: Union[int, float] = 1, max_size: int = 100, njobs: Optional[int] = -1):
         """
         Instance of iterated Tikhonov solver for inverse problem in Poisson noise with known spectral decomposition.
         :param kernel: Kernel of the integral operator.
@@ -246,16 +246,16 @@ class Tikhonov(EstimatorSpectrum):
         to stay with Lebesgue measure dx (False)
         :type transformed_measure: boolean
         :param rho: Weight strength in discrepancy equation.
-        :type rho: float
-        :param rho: Order of the iterated algorithm. Estimator for each regularization parameter is obtained after
+        :type rho: Union[int, float]
+        :param order: Order of the iterated algorithm. Estimator for each regularization parameter is obtained after
                     order iterations. Ordinary Tikhonov estimator is obtained for order = 1
-        :type rho: int
+        :type order: int
         :param lower: Lower end of the interval on which the operator is defined.
-        :type lower: float
+        :type lower: Union[int, float]
         :param upper: Upper end of the interval on which the operator is defined.
-        :type lower: float
+        :type upper: Union[int, float]
         :param tau: Parameter used to rescale the obtained values of estimated noise level.
-        :type tau: float (default 1)
+        :type tau: Union[int, float] (default 1)
         :param max_size: Maximum number of functions included in Fourier expansion.
         :type max_size: int (default 100)
         :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
@@ -443,8 +443,9 @@ class Tikhonov(EstimatorSpectrum):
 class Landweber(EstimatorSpectrum):
     def __init__(self, kernel: Callable, singular_values: Generator, left_singular_functions: Generator,
                  right_singular_functions: Generator, observations: np.ndarray, sample_size: int,
-                 transformed_measure: bool, rho: int, relaxation: float = 0.8, max_iter: int = 100, lower: float = 0,
-                 upper: float = 1, tau: float = 1, max_size: int = 100, njobs: Optional[int] = -1):
+                 transformed_measure: bool, rho: Union[int, float], relaxation: Union[int, float] = 0.8,
+                 max_iter: int = 100, lower: Union[int, float] = 0, upper: Union[int, float] = 1,
+                 tau: Union[int, float] = 1, max_size: int = 100, njobs: Optional[int] = -1):
         """
         Instance of iterated Landweber solver for inverse problem in Poisson noise with known spectral decomposition.
         :param kernel: Kernel of the integral operator.
@@ -463,18 +464,18 @@ class Landweber(EstimatorSpectrum):
         to stay with Lebesgue measure dx (False)
         :type transformed_measure: boolean
         :param rho: Weight strength in discrepancy equation.
-        :type rho: float
+        :type rho: Union[int, float]
         :param relaxation: Parameter used in the iteration of the algorithm (step size, omega). The square of the first
             singular value is scaled by this value
-        :type relaxation: float (default: 0.8)
+        :type relaxation: Union[int, float] (default: 0.8)
         :param max_iter: Maximum number of iterations of the algorithm
         :type max_iter: int (default: 100)
         :param lower: Lower end of the interval on which the operator is defined.
-        :type lower: float
+        :type lower: Union[int, float]
         :param upper: Upper end of the interval on which the operator is defined.
-        :type lower: float
-                :param tau: Parameter used to rescale the obtained values of estimated noise level.
-        :type tau: float (default 1)
+        :type upper: Union[int, float]
+        :param tau: Parameter used to rescale the obtained values of estimated noise level.
+        :type tau: Union[int, float] (default 1)
         :param max_size: Maximum number of functions included in Fourier expansion.
         :type max_size: int (default 100)
         :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.

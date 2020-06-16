@@ -1,6 +1,6 @@
 import inspect
 from abc import abstractmethod, ABCMeta
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 from warnings import warn
 
 import numpy as np
@@ -29,7 +29,7 @@ class EstimatorAbstract(metaclass=ABCMeta):
 
 class EstimatorSpectrum(EstimatorAbstract):
     def __init__(self, kernel: Callable, observations: np.ndarray, sample_size: int, transformed_measure: bool,
-                 rho: float, lower: float = 0, upper: float = 1):
+                 rho: Union[int, float], lower: Union[int, float] = 0, upper: Union[int, float] = 1):
         validate_EstimatorSpectrum(kernel, observations, sample_size, transformed_measure, rho, lower, upper)
         self.transformed_measure = transformed_measure
         try:
@@ -38,11 +38,11 @@ class EstimatorSpectrum(EstimatorAbstract):
         except ValueError:
             warn('Force vectorization of kernel')
             self.kernel: Callable = np.vectorize(kernel)
-        self.lower: float = lower
-        self.upper: float = upper
+        self.lower: Union[int, float] = lower
+        self.upper: Union[int, float] = upper
         self.observations: np.ndarray = observations
         self.sample_size: int = sample_size
-        self.rho: float = rho
+        self.rho: Union[int, float] = rho
         self.q_estimator: Optional[Callable] = None
         self.__w_function: Optional[Callable] = None
         self.delta: float = 0.
@@ -53,8 +53,8 @@ class EstimatorSpectrum(EstimatorAbstract):
         Estimate function q based on the observations using the known kernel. # TODO: only applicable to LSW problem so far
         """
         print('Estimating q function...')
-        observations: np.ndarray = self.observations
-        sample_size: int = self.sample_size
+        observations = self.observations
+        sample_size = self.sample_size
 
         if self.transformed_measure:
             def __q_estimator(x: float) -> np.float64:
