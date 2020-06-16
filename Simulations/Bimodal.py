@@ -13,11 +13,11 @@ from SVD import LordWillisSpektor
 replications = 10
 size = [2000, 10000, 1000000]
 max_size = 50
-max_iter = 1000
+max_iter = 5000
 functions = [BIMODAL]
 functions_name = ['BIMODAL']
-taus = [1., 1.1, 1.2, 1.3]
-taus_name = ['10', '11', '12', '13']
+taus = [0.35]
+taus_name = ['035']
 
 if __name__ == '__main__':
     for s in size:

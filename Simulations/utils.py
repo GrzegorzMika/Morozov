@@ -49,6 +49,8 @@ def plot_results(file_name, true, plot_lim):
 
     if not os.path.exists('Plots'):
         os.mkdir('Plots')
+        os.mkdir('Plots/loss')
+        os.mkdir('Plots/plot')
 
     data = pd.read_csv(os.path.join('Simulations', 'final', file_name))
     data = data.sort_values(by='loss').reset_index(drop=True)
@@ -64,11 +66,13 @@ def plot_results(file_name, true, plot_lim):
     plt.plot(np.linspace(0, 1, 10000), worst, ':', c='#ae2c87', label='worst')
     plt.plot(np.linspace(0, 1, 10000), best, '--', c='#4378bf', label='best')
     plt.ylim(-0.1, plot_lim[0])
-    plt.legend(loc='upper left', prop={'size': 12})
+    plt.legend(loc='upper left', prop={'size': 16})
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     plot_name = file_name.split('.')[0] + '.png'
-    plt.savefig(os.path.join('./Plots', plot_name))
+    plt.savefig(os.path.join('./Plots/plot', plot_name))
     plt.clf()
 
     plt.rcParams['figure.figsize'] = 7, 7
@@ -80,6 +84,8 @@ def plot_results(file_name, true, plot_lim):
     plt.plot(np.linspace(-0.05, 1.5, 10000), np.linspace(-0.05, 1.5, 10000))
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     plot_name = file_name.split('.')[0] + '_loss.png'
-    plt.savefig(os.path.join('./Plots', plot_name))
+    plt.savefig(os.path.join('./Plots/loss', plot_name))
     plt.clf()

@@ -65,13 +65,6 @@ def INCREASING(x):
     return 2 * x
 
 
-def UNIFORM(x):
-    """
-    Uniform distribution over [0, 1] interval.
-    """
-    return np.ones_like(np.array(x))
-
-
 def TRIANGULAR(x):
     """
     Triangular probability distribution function over interval [0, 1].
