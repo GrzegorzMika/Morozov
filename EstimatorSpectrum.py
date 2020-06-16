@@ -150,9 +150,12 @@ class TSVD(EstimatorSpectrum):
         self.estimate_delta()
 
         for alpha in np.square(np.concatenate([[np.inf], self.sigmas])):
-            residual = np.sqrt(np.sum(np.multiply(np.square(
-                np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha), np.square(self.sigmas)),
-                            1)), np.square(self.q_fourier_coeffs))))
+            regularization = np.square(np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha),
+                                                               np.square(self.sigmas)), 1))
+            weight = np.divide(1, np.square(self.sigmas) + self.rho)
+            coeffs = np.square(self.q_fourier_coeffs)
+            summand = np.sort(np.multiply(weight, np.multiply(regularization, coeffs)), kind='heapsort')
+            residual = np.sqrt(np.sum(summand))
             self.regularization_param = alpha
             if residual <= np.sqrt(self.tau) * self.delta:
                 break
@@ -360,10 +363,12 @@ class Tikhonov(EstimatorSpectrum):
         self.estimate_delta()
 
         for alpha in np.flip(np.linspace(0, 3, 1000)):
-            residual = np.sqrt(np.sum(np.multiply(np.square(
-                np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha, self.order),
-                                        np.square(self.sigmas)),
-                            1)), np.square(self.q_fourier_coeffs))))
+            regularization = np.square(np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha),
+                                                               np.square(self.sigmas)), 1))
+            weight = np.divide(1, np.square(self.sigmas) + self.rho)
+            coeffs = np.square(self.q_fourier_coeffs)
+            summand = np.sort(np.multiply(weight, np.multiply(regularization, coeffs)), kind='heapsort')
+            residual = np.sqrt(np.sum(summand))
             self.regularization_param = alpha
             if residual <= np.sqrt(self.tau) * self.delta:
                 self.residual = residual
@@ -438,7 +443,7 @@ class Tikhonov(EstimatorSpectrum):
 class Landweber(EstimatorSpectrum):
     def __init__(self, kernel: Callable, singular_values: Generator, left_singular_functions: Generator,
                  right_singular_functions: Generator, observations: np.ndarray, sample_size: int,
-                 transformed_measure: bool, rho: int, relaxation: float = 0.8, max_iter:int = 100, lower: float = 0,
+                 transformed_measure: bool, rho: int, relaxation: float = 0.8, max_iter: int = 100, lower: float = 0,
                  upper: float = 1, tau: float = 1, max_size: int = 100, njobs: Optional[int] = -1):
         """
         Instance of iterated Landweber solver for inverse problem in Poisson noise with known spectral decomposition.
@@ -591,9 +596,12 @@ class Landweber(EstimatorSpectrum):
         self.estimate_delta()
 
         for k in np.arange(0, self.max_iter):
-            residual = np.sqrt(np.sum(np.multiply(np.square(
-                np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
-                                        np.square(self.sigmas)), 1)), np.square(self.q_fourier_coeffs))))
+            regularization = np.square(np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha),
+                                                               np.square(self.sigmas)), 1))
+            weight = np.divide(1, np.square(self.sigmas) + self.rho)
+            coeffs = np.square(self.q_fourier_coeffs)
+            summand = np.sort(np.multiply(weight, np.multiply(regularization, coeffs)), kind='heapsort')
+            residual = np.sqrt(np.sum(summand))
             self.regularization_param = k
             if residual <= np.sqrt(self.tau) * self.delta:
                 self.residual = residual
