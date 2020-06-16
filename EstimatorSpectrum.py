@@ -1,7 +1,6 @@
 import inspect
 from multiprocessing import cpu_count
 from typing import Callable, Optional, Generator, Iterable
-from warnings import warn
 
 import numpy as np
 from dask.distributed import Client
@@ -11,15 +10,17 @@ from scipy.integrate import quad
 
 from GeneralEstimator import EstimatorSpectrum
 from decorators import timer
+from validate import validate_TSVD, validate_Tikhonov, validate_Landweber
 
 location = './cachedir'
 memory = Memory(location, verbose=0, bytes_limit=1024 * 1024 * 1024)
 
 
 class TSVD(EstimatorSpectrum):
-    def __init__(self, kernel, singular_values, left_singular_functions, right_singular_functions, observations,
-                 sample_size, transformed_measure: bool = False, lower: float = 0,
-                 upper: float = 1, **kwargs):
+    def __init__(self, kernel: Callable, singular_values: Generator, left_singular_functions: Generator,
+                 right_singular_functions: Generator, observations: np.ndarray, sample_size: int,
+                 transformed_measure: bool, rho: float, lower: float = 0, upper: float = 1, tau: float = 1,
+                 max_size: int = 100, njobs: Optional[int] = -1):
         """
         Instance of TSVD solver for inverse problem in Poisson noise with known spectral decomposition.
         :param kernel: Kernel of the integral operator.
@@ -36,36 +37,33 @@ class TSVD(EstimatorSpectrum):
         :type sample_size: int
         :param transformed_measure: To performed the calculations with respect to the transformed measure xdx (True) or
         to stay with Lebesgue measure dx (False)
-        :type transformed_measure: boolean (default: False)
+        :type transformed_measure: boolean
+        :param rho: Weight strength in discrepancy equation.
+        :type rho: float
         :param lower: Lower end of the interval on which the operator is defined.
         :type lower: float
         :param upper: Upper end of the interval on which the operator is defined.
         :type lower: float
-        :param kwargs: Possible arguments:
-            - tau: Parameter used to rescale the obtained values of estimated noise level (float or int, default: 1).
-            - max_size: Maximum number of functions included in Fourier expansion (int, default: 100).
+        :param tau: Parameter used to rescale the obtained values of estimated noise level.
+        :type tau: float (default 1)
+        :param max_size: Maximum number of functions included in Fourier expansion.
+        :type max_size: int (default 100)
+        :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
+        :type njobs: int (default -1)
         """
-        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, lower, upper)
+        validate_TSVD(kernel, singular_values, left_singular_functions, right_singular_functions, observations,
+                      sample_size, transformed_measure, rho, lower, upper, tau, max_size, njobs)
+        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, rho, lower, upper)
         self.kernel: Callable = kernel
-        assert isinstance(singular_values, Generator), 'Please provide the singular values as generator'
         self.singular_values: Generator = singular_values
-        assert isinstance(left_singular_functions, Generator), 'Please provide the left singular functions as generator'
         self.left_singular_functions: Generator = left_singular_functions
-        assert isinstance(right_singular_functions,
-                          Generator), 'Please provide the right singular functions as generator'
         self.right_singular_functions: Generator = right_singular_functions
         self.observations: np.ndarray = observations
         self.sample_size: int = sample_size
         self.lower: float = lower
         self.upper: float = upper
-        self.tau: float = kwargs.get('tau', 1)
-        if not isinstance(self.tau, float) and not isinstance(self.tau, int):
-            warn('Wrong tau has been specified! Falling back from {} to default value 1'.format(self.tau))
-            self.tau = 1
-        self.max_size: int = kwargs.get('max_size', 100)
-        if not isinstance(self.max_size, int):
-            warn('Wrong max_size has been specified! Falling back from {} to default value 100'.format(self.max_size))
-            self.max_size = 100
+        self.tau: float = tau
+        self.max_size: int = max_size
         self.q_fourier_coeffs: np.ndarray = np.repeat([0.], self.max_size)
         self.sigmas: np.ndarray = np.repeat([0.], self.max_size)
         self.regularization_param: float = 0.
@@ -75,7 +73,6 @@ class TSVD(EstimatorSpectrum):
         self.residual: Optional[float] = None
         self.vs: list = []
         self.solution: Optional[Callable] = None
-        njobs = kwargs.get('njobs')
         if njobs is None or njobs < 0 or not isinstance(njobs, int):
             njobs = cpu_count()
         self.client = Client(threads_per_worker=1, n_workers=njobs)
@@ -114,7 +111,7 @@ class TSVD(EstimatorSpectrum):
                 futures.append(client.submit(integrate, fun))
             return client.gather(futures)
 
-        coeffs = fourier_coeffs_helper_TSVD(self.observations, inspect.getsource(self.kernel).split('return')[1].strip())
+        coeffs = fourier_coeffs_helper_TSVD(self.observations, inspect.getsource(self.kernel))
         self.q_fourier_coeffs = np.array(coeffs)
 
     def __singular_values(self) -> None:
@@ -173,9 +170,6 @@ class TSVD(EstimatorSpectrum):
 
         self.solution = np.vectorize(solution)
 
-    def refresh(self) -> None:
-        pass
-
     @timer
     def oracle(self, true: Callable, patience: int = 10) -> None:
         """
@@ -227,9 +221,10 @@ class TSVD(EstimatorSpectrum):
 
 
 class Tikhonov(EstimatorSpectrum):
-    def __init__(self, kernel, singular_values, left_singular_functions, right_singular_functions, observations,
-                 sample_size, transformed_measure: bool = False, lower: float = 0,
-                 upper: float = 1, **kwargs):
+    def __init__(self, kernel: Callable, singular_values: Generator, left_singular_functions: Generator,
+                 right_singular_functions: Generator, observations: np.ndarray, sample_size: int,
+                 transformed_measure: bool, rho: float, order: int = 2, lower: float = 0, upper: float = 1,
+                 tau: float = 1, max_size: int = 100, njobs: Optional[int] = -1):
         """
         Instance of iterated Tikhonov solver for inverse problem in Poisson noise with known spectral decomposition.
         :param kernel: Kernel of the integral operator.
@@ -246,42 +241,38 @@ class Tikhonov(EstimatorSpectrum):
         :type sample_size: int
         :param transformed_measure: To performed the calculations with respect to the transformed measure xdx (True) or
         to stay with Lebesgue measure dx (False)
-        :type transformed_measure: boolean (default: False)
+        :type transformed_measure: boolean
+        :param rho: Weight strength in discrepancy equation.
+        :type rho: float
+        :param rho: Order of the iterated algorithm. Estimator for each regularization parameter is obtained after
+                    order iterations. Ordinary Tikhonov estimator is obtained for order = 1
+        :type rho: int
         :param lower: Lower end of the interval on which the operator is defined.
         :type lower: float
         :param upper: Upper end of the interval on which the operator is defined.
         :type lower: float
-        :param kwargs: Possible arguments:
-            - tau: Parameter used to rescale the obtained values of estimated noise level (float or int, default: 1).
-            - max_size: Maximum number of functions included in Fourier expansion (int, default: 100).
-            - order: Order of the iterated algorithm. Estimator for each regularization parameter is obtained after
-                    order iterations. Ordinary Tikhonov estimator is obtained for order = 1 (int, default: 2).
+        :param tau: Parameter used to rescale the obtained values of estimated noise level.
+        :type tau: float (default 1)
+        :param max_size: Maximum number of functions included in Fourier expansion.
+        :type max_size: int (default 100)
+        :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
+        :type njobs: int (default -1)
         """
-        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, lower, upper)
+        validate_Tikhonov(kernel, singular_values, left_singular_functions, right_singular_functions,
+                          observations, sample_size, transformed_measure, rho, order, lower, upper, tau,
+                          max_size, njobs)
+        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, rho, lower, upper)
         self.kernel: Callable = kernel
-        assert isinstance(singular_values, Generator), 'Please provide the singular values as generator'
         self.singular_values: Generator = singular_values
-        assert isinstance(left_singular_functions, Generator), 'Please provide the left singular functions as generator'
         self.left_singular_functions: Generator = left_singular_functions
-        assert isinstance(right_singular_functions,
-                          Generator), 'Please provide the right singular functions as generator'
         self.right_singular_functions: Generator = right_singular_functions
         self.observations: np.ndarray = observations
         self.sample_size: int = sample_size
         self.lower: float = lower
         self.upper: float = upper
-        self.tau: float = kwargs.get('tau', 1)
-        if not isinstance(self.tau, float) and not isinstance(self.tau, int):
-            warn('Wrong tau has been specified! Falling back from {} to default value 1'.format(self.tau))
-            self.tau = 1
-        self.max_size: int = kwargs.get('max_size', 100)
-        if not isinstance(self.max_size, int):
-            warn('Wrong max_size has been specified! Falling back from {} to default value 100'.format(self.max_size))
-            self.max_size = 100
-        self.__order: int = kwargs.get('order', 2)
-        if not isinstance(self.__order, int):
-            warn('Wrong max_size has been specified! Falling back from {} to default value 2'.format(self.__order))
-            self.__order = 100
+        self.tau: float = tau
+        self.max_size: int = max_size
+        self.order: int = order
         self.q_fourier_coeffs: np.ndarray = np.repeat([0.], self.max_size)
         self.sigmas: np.ndarray = np.repeat([0.], self.max_size)
         self.regularization_param: float = 0.
@@ -291,19 +282,10 @@ class Tikhonov(EstimatorSpectrum):
         self.residual: Optional[float] = None
         self.vs: list = []
         self.solution: Optional[Callable] = None
-        njobs = kwargs.get('njobs')
         if njobs is None or njobs < 0 or not isinstance(njobs, int):
             njobs = cpu_count()
         self.client = Client(threads_per_worker=1, n_workers=njobs)
         print('Dashboard available under: {}'.format(self.client.dashboard_link))
-
-    @property
-    def order(self) -> int:
-        return self.__order
-
-    @order.setter
-    def order(self, order: int) -> None:
-        self.__order = order
 
     @timer
     def __find_fourier_coeffs(self) -> None:
@@ -338,7 +320,7 @@ class Tikhonov(EstimatorSpectrum):
                 futures.append(client.submit(integrate, fun))
             return client.gather(futures)
 
-        coeffs = fourier_coeffs_helper_Tikhonov(self.observations, inspect.getsource(self.kernel).split('return')[1].strip())
+        coeffs = fourier_coeffs_helper_Tikhonov(self.observations, inspect.getsource(self.kernel))
         self.q_fourier_coeffs = np.array(coeffs)
 
     def __singular_values(self) -> None:
@@ -454,11 +436,12 @@ class Tikhonov(EstimatorSpectrum):
 
 
 class Landweber(EstimatorSpectrum):
-    def __init__(self, kernel, singular_values, left_singular_functions, right_singular_functions, observations,
-                 sample_size, transformed_measure: bool = False, lower: float = 0,
-                 upper: float = 1, **kwargs):
+    def __init__(self, kernel: Callable, singular_values: Generator, left_singular_functions: Generator,
+                 right_singular_functions: Generator, observations: np.ndarray, sample_size: int,
+                 transformed_measure: bool, rho: int, relaxation: float = 0.8, max_iter:int = 100, lower: float = 0,
+                 upper: float = 1, tau: float = 1, max_size: int = 100, njobs: Optional[int] = -1):
         """
-        Instance of iterated Tikhonov solver for inverse problem in Poisson noise with known spectral decomposition.
+        Instance of iterated Landweber solver for inverse problem in Poisson noise with known spectral decomposition.
         :param kernel: Kernel of the integral operator.
         :type kernel: Callable
         :param singular_values: Singular values of the operator.
@@ -473,48 +456,41 @@ class Landweber(EstimatorSpectrum):
         :type sample_size: int
         :param transformed_measure: To performed the calculations with respect to the transformed measure xdx (True) or
         to stay with Lebesgue measure dx (False)
-        :type transformed_measure: boolean (default: False)
+        :type transformed_measure: boolean
+        :param rho: Weight strength in discrepancy equation.
+        :type rho: float
+        :param relaxation: Parameter used in the iteration of the algorithm (step size, omega). The square of the first
+            singular value is scaled by this value
+        :type relaxation: float (default: 0.8)
+        :param max_iter: Maximum number of iterations of the algorithm
+        :type max_iter: int (default: 100)
         :param lower: Lower end of the interval on which the operator is defined.
         :type lower: float
         :param upper: Upper end of the interval on which the operator is defined.
         :type lower: float
-        :param kwargs: Possible arguments:
-            - tau: Parameter used to rescale the obtained values of estimated noise level (float or int, default: 1).
-            - max_size: Maximum number of functions included in Fourier expansion (int, default: 100).
-            - relaxation: Parameter used in the iteration of the algorithm (step size, omega). The square of the first
-            singular value is scaled by this value(float, default: 0.8).
-            - max_iter: Maximum number of iterations of the algorithm (int, default: 100)
+                :param tau: Parameter used to rescale the obtained values of estimated noise level.
+        :type tau: float (default 1)
+        :param max_size: Maximum number of functions included in Fourier expansion.
+        :type max_size: int (default 100)
+        :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
+        :type njobs: int (default -1)
         """
-        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, lower, upper)
+        validate_Landweber(kernel, singular_values, left_singular_functions, right_singular_functions,
+                           observations, sample_size, transformed_measure, rho, relaxation, max_iter, lower, upper,
+                           tau, max_size, njobs)
+        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, rho, lower, upper)
         self.kernel: Callable = kernel
-        assert isinstance(singular_values, Generator), 'Please provide the singular values as generator'
         self.singular_values: Generator = singular_values
-        assert isinstance(left_singular_functions, Generator), 'Please provide the left singular functions as generator'
         self.left_singular_functions: Generator = left_singular_functions
-        assert isinstance(right_singular_functions,
-                          Generator), 'Please provide the right singular functions as generator'
         self.right_singular_functions: Generator = right_singular_functions
         self.observations: np.ndarray = observations
         self.sample_size: int = sample_size
         self.lower: float = lower
         self.upper: float = upper
-        self.tau: float = kwargs.get('tau', 1)
-        if not isinstance(self.tau, float) and not isinstance(self.tau, int):
-            warn('Wrong tau has been specified! Falling back from {} to default value 1'.format(self.tau))
-            self.tau = 1
-        self.max_size: int = kwargs.get('max_size', 100)
-        if not isinstance(self.max_size, int):
-            warn('Wrong max_size has been specified! Falling back from {} to default value 100'.format(self.max_size))
-            self.max_size = 100
-        self.max_iter: int = kwargs.get('max_iter', 100)
-        if not isinstance(self.max_iter, int):
-            warn('Wrong max_iter has been specified! Falling back from {} to default value 100'.format(self.max_iter))
-            self.max_iter = 100
-        self.__relaxation: float = kwargs.get('relaxation', 0.8)
-        if not isinstance(self.__relaxation, float) and not isinstance(self.__relaxation, int):
-            warn('Wrong relaxation has been specified! Falling back from {} to default value 0.8'.format(
-                self.__relaxation))
-            self.__relaxation = 0.8
+        self.tau: float = tau
+        self.max_size: int = max_size
+        self.max_iter: int = max_iter
+        self.__relaxation: float = relaxation
         self.q_fourier_coeffs: np.ndarray = np.repeat([0.], self.max_size)
         self.sigmas: np.ndarray = np.repeat([0.], self.max_size)
         self.regularization_param: int = 0
@@ -524,7 +500,6 @@ class Landweber(EstimatorSpectrum):
         self.residual: Optional[float] = None
         self.vs: list = []
         self.solution: Optional[Callable] = None
-        njobs = kwargs.get('njobs')
         if njobs is None or njobs < 0 or not isinstance(njobs, int):
             njobs = cpu_count()
         self.client = Client(threads_per_worker=1, n_workers=njobs)
@@ -571,7 +546,7 @@ class Landweber(EstimatorSpectrum):
                 futures.append(client.submit(integrate, fun))
             return client.gather(futures)
 
-        coeffs = fourier_coeffs_helper_Landweber(self.observations, inspect.getsource(self.kernel).split('return')[1].strip())
+        coeffs = fourier_coeffs_helper_Landweber(self.observations, inspect.getsource(self.kernel))
         self.q_fourier_coeffs = np.array(coeffs)
 
     def __singular_values(self) -> None:
