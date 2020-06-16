@@ -23,8 +23,7 @@ if __name__ == '__main__':
             for j, tau in enumerate(taus):
                 for r, rho in enumerate(rhos):
                     generator = LSW(pdf=fun, sample_size=s, seed=914)
-                    results = {'selected_param': [], 'oracle_param': [], 'oracle_loss': [], 'loss': [], 'solution': [],
-                               'oracle_solution': []}
+                    results = {'selected_param': [],'loss': [], 'solution': []}
                     for _ in range(replications):
                         spectrum = LordWillisSpektor(transformed_measure=True)
                         obs = generator.generate()
@@ -37,11 +36,8 @@ if __name__ == '__main__':
                         landweber.oracle(fun)
                         solution = list(landweber.solution(np.linspace(0, 1, 10000)))
                         results['selected_param'].append(landweber.regularization_param)
-                        # results['oracle_param'].append(landweber.oracle_param)
-                        # results['oracle_loss'].append(landweber.oracle_loss)
                         results['loss'].append(landweber.residual)
                         results['solution'].append(solution)
-                        # results['oracle_solution'].append(list(landweber.oracle_solution))
                         landweber.client.close()
                     pd.DataFrame(results).to_csv(
                         'Weighted_Landweber_rho_{}_tau_{}.csv'.format(rhos_name[r], taus_name[j]))
