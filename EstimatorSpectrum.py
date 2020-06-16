@@ -363,7 +363,7 @@ class Tikhonov(EstimatorSpectrum):
         self.estimate_delta()
 
         for alpha in np.flip(np.linspace(0, 3, 1000)):
-            regularization = np.square(np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha),
+            regularization = np.square(np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha, self.order),
                                                                np.square(self.sigmas)), 1))
             weight = np.divide(1, np.square(self.sigmas) + self.rho)
             coeffs = np.square(self.q_fourier_coeffs)
@@ -496,7 +496,7 @@ class Landweber(EstimatorSpectrum):
         self.tau: float = tau
         self.max_size: int = max_size
         self.max_iter: int = max_iter
-        self.__relaxation: float = relaxation
+        self.relaxation: float = relaxation
         self.q_fourier_coeffs: np.ndarray = np.repeat([0.], self.max_size)
         self.sigmas: np.ndarray = np.repeat([0.], self.max_size)
         self.regularization_param: int = 0
@@ -510,14 +510,6 @@ class Landweber(EstimatorSpectrum):
             njobs = cpu_count()
         self.client = Client(threads_per_worker=1, n_workers=njobs)
         print('Dashboard available under: {}'.format(self.client.dashboard_link))
-
-    @property
-    def relaxation(self) -> float:
-        return self.__relaxation
-
-    @relaxation.setter
-    def relaxation(self, relaxation: float) -> None:
-        self.__relaxation = relaxation
 
     @timer
     def __find_fourier_coeffs(self) -> None:
@@ -597,7 +589,7 @@ class Landweber(EstimatorSpectrum):
         self.estimate_delta()
 
         for k in np.arange(0, self.max_iter):
-            regularization = np.square(np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha),
+            regularization = np.square(np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
                                                                np.square(self.sigmas)), 1))
             weight = np.divide(1, np.square(self.sigmas) + self.rho)
             coeffs = np.square(self.q_fourier_coeffs)
