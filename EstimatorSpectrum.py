@@ -51,8 +51,7 @@ class TSVD(EstimatorSpectrum):
         :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
         :type njobs: int (default -1)
         """
-        validate_TSVD(kernel, singular_values, left_singular_functions, right_singular_functions, observations,
-                      sample_size, transformed_measure, rho, lower, upper, tau, max_size, njobs)
+        validate_TSVD(rho, lower, upper, tau, njobs)
         EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, rho, lower, upper)
         self.kernel: Callable = kernel
         self.singular_values: Generator = singular_values
@@ -261,8 +260,7 @@ class Tikhonov(EstimatorSpectrum):
         :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
         :type njobs: int (default -1)
         """
-        validate_Tikhonov(kernel, singular_values, left_singular_functions, right_singular_functions,
-                          observations, sample_size, transformed_measure, rho, order, lower, upper, tau,
+        validate_Tikhonov(rho, order, upper, tau,
                           max_size, njobs)
         EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, rho, lower, upper)
         self.kernel: Callable = kernel
@@ -481,8 +479,7 @@ class Landweber(EstimatorSpectrum):
         :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
         :type njobs: int (default -1)
         """
-        validate_Landweber(kernel, singular_values, left_singular_functions, right_singular_functions,
-                           observations, sample_size, transformed_measure, rho, relaxation, max_iter, lower, upper,
+        validate_Landweber(rho, relaxation, max_iter, upper,
                            tau, max_size, njobs)
         EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, rho, lower, upper)
         self.kernel: Callable = kernel

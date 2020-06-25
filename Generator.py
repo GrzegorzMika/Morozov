@@ -155,28 +155,6 @@ class LewisShedler(Generator):
         t = s[(d <= t) & (t <= self.upper)]
         return t.astype(np.float64)
 
-    def generate_slow(self) -> np.ndarray:
-        """
-        Simulation of an Inhomogeneous Poisson process with bounded intensity function λ(t), on [lower, upper] using
-        algorithm from "Simulation of nonhomogeneous Poisson processes by thinning." Naval Res. Logistics Quart, 26:403–
-        413, 1973. Naming conventions follows "Thinning Algorithms for Simulating Point Processes" by Yuanda Chen.
-        Original implementation of an algorithm, not optimized.
-        :return: numpy array containing the simulated values of inhomogeneous process.
-        """
-        warnings.warn('You are using not optimized version of algorithm', RuntimeWarning)
-        t: List[Union[float, Any]] = []
-        s: List[Union[float, Any]] = []
-        t.append(0)
-        s.append(0)
-        while s[-1] < (self.upper - self.lower):
-            u: float = np.random.uniform(0, 1, 1)[0]
-            w: float = -np.log(u) / self.lambda_hat
-            s.append(s[-1] + w)
-            d: float = np.random.uniform(0, 1, 1)[0]
-            if d <= self.intensity_function(s[-1]) / self.lambda_hat:
-                t.append(s[-1])
-        return np.array(t)
-
     def visualize(self, save=False):
         """
         Auxiliary function to visualize and save the visualizations of an intensity function,
