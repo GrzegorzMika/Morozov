@@ -25,9 +25,8 @@ class EstimatorAbstract(metaclass=ABCMeta):
 
 class EstimatorSpectrum(EstimatorAbstract):
     def __init__(self, kernel: Callable, observations: np.ndarray, sample_size: int, rho: float,
-                 transformed_measure: bool,
-                 singular_values: Generator, left_singular_functions: Generator, right_singular_functions: Generator,
-                 max_size: int):
+                 transformed_measure: bool, singular_values: Generator, left_singular_functions: Generator,
+                 right_singular_functions: Generator, max_size: int):
 
         validate_EstimatorSpectrum(kernel, observations, sample_size, rho, transformed_measure, singular_values,
                                    left_singular_functions, right_singular_functions, max_size)
@@ -50,8 +49,8 @@ class EstimatorSpectrum(EstimatorAbstract):
         self.__w_function: Optional[Callable] = None
         self.delta: float = 0.
         self.pi = np.empty(max_size)
-        self.ui = np.empty((max_size, observations.shape[0]))
-        self.ui_square = np.empty((max_size, observations.shape[0]))
+        self.ui = np.empty(max_size)
+        self.ui_square = np.empty(max_size)
 
         self.__precompute()
 
@@ -69,9 +68,9 @@ class EstimatorSpectrum(EstimatorAbstract):
 
         observations = self.observations
         for i in range(self.max_size):
-            self.ui[i] = np.sort(left_f[i](observations))
-
-        self.ui_square = self.ui**2
+            tmp = np.sort(left_f[i](observations))
+            self.ui[i] = np.sum(tmp)
+            self.ui_square[i] = np.sum(np.square(tmp))
 
     @timer
     def estimate_q(self) -> None:
@@ -101,12 +100,7 @@ class EstimatorSpectrum(EstimatorAbstract):
         """
         print('Estimating noise level...')
 
-        weights = self.pi
-        ui = self.ui_square
-
-        inner_sum = np.sum(ui, axis=1)
-        outer_sum = np.sort(np.multiply(weights, inner_sum))
-        self.delta = np.divide(np.sum(outer_sum), self.sample_size**2)
+        self.delta = np.divide(np.sum(np.sort(np.multiply(self.pi, self.ui_square))), self.sample_size**2)
 
         print('Estimated noise level: {}'.format(self.delta))
 

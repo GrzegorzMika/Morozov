@@ -1,6 +1,6 @@
 import warnings
 from abc import abstractmethod, ABCMeta
-from typing import Callable, Union, List, Any, Optional
+from typing import Callable, Union, Optional
 from warnings import warn
 
 import numpy as np

@@ -17,10 +17,20 @@ memory = Memory(location, verbose=0, bytes_limit=1024 * 1024 * 1024)
 
 
 class TSVD(EstimatorSpectrum):
-    def __init__(self, kernel: Callable, singular_values: Generator, left_singular_functions: Generator,
-                 right_singular_functions: Generator, observations: np.ndarray, sample_size: int,
-                 transformed_measure: bool, rho: Union[int, float], lower: Union[int, float] = 0,
-                 upper: Union[int, float] = 1, tau: Union[int, float] = 1, max_size: int = 100, njobs: Optional[int] = -1):
+    def __init__(self,
+                 kernel: Callable,
+                 singular_values: Generator,
+                 left_singular_functions: Generator,
+                 right_singular_functions: Generator,
+                 observations: np.ndarray,
+                 sample_size: int,
+                 transformed_measure: bool,
+                 rho: Union[int, float],
+                 lower: Union[int, float] = 0,
+                 upper: Union[int, float] = 1,
+                 tau: Union[int, float] = 1,
+                 max_size: int = 1000,
+                 njobs: Optional[int] = -1):
         """
         Instance of TSVD solver for inverse problem in Poisson noise with known spectral decomposition.
         :param kernel: Kernel of the integral operator.
@@ -47,12 +57,13 @@ class TSVD(EstimatorSpectrum):
         :param tau: Parameter used to rescale the obtained values of estimated noise level.
         :type tau: Union[int, float] (default 1)
         :param max_size: Maximum number of functions included in Fourier expansion.
-        :type max_size: int (default 100)
-        :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
+        :type max_size: int (default 1000)
+        :param njobs: Number ofthreadss to be used to calculate Fourier expansion, negative means all available.
         :type njobs: int (default -1)
         """
-        validate_TSVD(rho, lower, upper, tau, njobs)
-        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, rho, lower, upper)
+        validate_TSVD(tau, njobs)
+        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, rho, transformed_measure, singular_values,
+                                   left_singular_functions, right_singular_functions, max_size)
         self.kernel: Callable = kernel
         self.singular_values: Generator = singular_values
         self.left_singular_functions: Generator = left_singular_functions
@@ -226,7 +237,8 @@ class Tikhonov(EstimatorSpectrum):
     def __init__(self, kernel: Callable, singular_values: Generator, left_singular_functions: Generator,
                  right_singular_functions: Generator, observations: np.ndarray, sample_size: int,
                  transformed_measure: bool, rho: Union[int, float], order: int = 2, lower: Union[int, float] = 0,
-                 upper: Union[int, float] = 1, tau: Union[int, float] = 1, max_size: int = 100, njobs: Optional[int] = -1):
+                 upper: Union[int, float] = 1, tau: Union[int, float] = 1, max_size: int = 100,
+                 njobs: Optional[int] = -1):
         """
         Instance of iterated Tikhonov solver for inverse problem in Poisson noise with known spectral decomposition.
         :param kernel: Kernel of the integral operator.
@@ -260,8 +272,7 @@ class Tikhonov(EstimatorSpectrum):
         :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
         :type njobs: int (default -1)
         """
-        validate_Tikhonov(rho, order, upper, tau,
-                          max_size, njobs)
+        validate_Tikhonov(order, tau, njobs)
         EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, rho, lower, upper)
         self.kernel: Callable = kernel
         self.singular_values: Generator = singular_values
@@ -361,8 +372,9 @@ class Tikhonov(EstimatorSpectrum):
         self.estimate_delta()
 
         for alpha in np.flip(np.linspace(0, 3, 1000)):
-            regularization = np.square(np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha, self.order),
-                                                               np.square(self.sigmas)), 1))
+            regularization = np.square(
+                np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), alpha, self.order),
+                                        np.square(self.sigmas)), 1))
             weight = np.divide(1, np.square(self.sigmas) + self.rho)
             coeffs = np.square(self.q_fourier_coeffs)
             summand = np.sort(np.multiply(weight, np.multiply(regularization, coeffs)), kind='heapsort')
@@ -479,8 +491,7 @@ class Landweber(EstimatorSpectrum):
         :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
         :type njobs: int (default -1)
         """
-        validate_Landweber(rho, relaxation, max_iter, upper,
-                           tau, max_size, njobs)
+        validate_Landweber(relaxation, max_iter, tau, njobs)
         EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, rho, lower, upper)
         self.kernel: Callable = kernel
         self.singular_values: Generator = singular_values
@@ -586,8 +597,9 @@ class Landweber(EstimatorSpectrum):
         self.estimate_delta()
 
         for k in np.arange(0, self.max_iter):
-            regularization = np.square(np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
-                                                               np.square(self.sigmas)), 1))
+            regularization = np.square(
+                np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
+                                        np.square(self.sigmas)), 1))
             weight = np.divide(1, np.square(self.sigmas) + self.rho)
             coeffs = np.square(self.q_fourier_coeffs)
             summand = np.sort(np.multiply(weight, np.multiply(regularization, coeffs)), kind='heapsort')
