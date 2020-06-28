@@ -451,11 +451,21 @@ class Tikhonov(EstimatorSpectrum):
 
 
 class Landweber(EstimatorSpectrum):
-    def __init__(self, kernel: Callable, singular_values: Generator, left_singular_functions: Generator,
-                 right_singular_functions: Generator, observations: np.ndarray, sample_size: int,
-                 transformed_measure: bool, rho: Union[int, float], relaxation: Union[int, float] = 0.8,
-                 max_iter: int = 100, lower: Union[int, float] = 0, upper: Union[int, float] = 1,
-                 tau: Union[int, float] = 1, max_size: int = 100, njobs: Optional[int] = -1):
+    def __init__(self,
+                 kernel: Callable,
+                 singular_values: Generator,
+                 left_singular_functions: Generator,
+                 right_singular_functions: Generator,
+                 observations: np.ndarray,
+                 sample_size: int,
+                 transformed_measure: bool,
+                 rho: Union[int, float],
+                 relaxation: Union[int, float] = 0.8,
+                 max_iter: int = 1000,
+                 lower: Union[int, float] = 0,
+                 upper: Union[int, float] = 1,
+                 tau: Union[int, float] = 1,
+                 max_size: int = 100):
         """
         Instance of iterated Landweber solver for inverse problem in Poisson noise with known spectral decomposition.
         :param kernel: Kernel of the integral operator.
@@ -487,87 +497,66 @@ class Landweber(EstimatorSpectrum):
         :param tau: Parameter used to rescale the obtained values of estimated noise level.
         :type tau: Union[int, float] (default 1)
         :param max_size: Maximum number of functions included in Fourier expansion.
-        :type max_size: int (default 100)
-        :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
-        :type njobs: int (default -1)
+        :type max_size: int (default 1000)
         """
         validate_Landweber(relaxation, max_iter, tau, njobs)
-        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, rho, lower, upper)
-        self.kernel: Callable = kernel
-        self.singular_values: Generator = singular_values
-        self.left_singular_functions: Generator = left_singular_functions
-        self.right_singular_functions: Generator = right_singular_functions
-        self.observations: np.ndarray = observations
-        self.sample_size: int = sample_size
+
+        EstimatorSpectrum.__init__(self, kernel, observations, sample_size, rho, transformed_measure, singular_values,
+                                   left_singular_functions, right_singular_functions, max_size)
+
         self.lower: float = lower
         self.upper: float = upper
         self.tau: float = tau
-        self.max_size: int = max_size
         self.max_iter: int = max_iter
         self.relaxation: float = relaxation
-        self.q_fourier_coeffs: np.ndarray = np.repeat([0.], self.max_size)
-        self.sigmas: np.ndarray = np.repeat([0.], self.max_size)
         self.regularization_param: int = 0
         self.oracle_param: Optional[float] = None
         self.oracle_loss: Optional[float] = None
         self.oracle_solution: Optional[np.ndarray] = None
         self.residual: Optional[float] = None
-        self.vs: list = []
         self.solution: Optional[Callable] = None
-        if njobs is None or njobs < 0 or not isinstance(njobs, int):
-            njobs = cpu_count()
-        self.client = Client(threads_per_worker=1, n_workers=njobs)
-        print('Dashboard available under: {}'.format(self.client.dashboard_link))
 
-    @timer
-    def __find_fourier_coeffs(self) -> None:
-        """
-        Calculate max_size Fourier coefficients of a q estimator with respect the the right singular functions of an operator.
-        Coefficients are calculated in parallel using the dask backend, the progress is displayed on Dask dashbord running
-        by default on localhost://8787.
-        """
-        self.estimate_q()
-        print('Calculation of Fourier coefficients of q estimator...')
-        q_estimator: Callable = self.q_estimator
-        lower: float = self.lower
-        upper: float = self.upper
-        client = self.client
+    # @timer
+    # def __find_fourier_coeffs(self) -> None:
+    #     """
+    #     Calculate max_size Fourier coefficients of a q estimator with respect the the right singular functions of an operator.
+    #     Coefficients are calculated in parallel using the dask backend, the progress is displayed on Dask dashbord running
+    #     by default on localhost://8787.
+    #     """
+    #     self.estimate_q()
+    #     print('Calculation of Fourier coefficients of q estimator...')
+    #     q_estimator: Callable = self.q_estimator
+    #     lower: float = self.lower
+    #     upper: float = self.upper
+    #     client = self.client
+    #
+    #     if self.transformed_measure:
+    #         def product(function: Callable) -> Callable:
+    #             return lambda x: q_estimator(x) * function(x) * x
+    #     else:
+    #         def product(function: Callable) -> Callable:
+    #             return lambda x: q_estimator(x) * function(x)
+    #
+    #     def integrate(function: Callable) -> float:
+    #         return quad(function, lower, upper, limit=10000)[0]
+    #
+    #     products: Iterable = map(product, self.vs)
+    #
+    #     @memory.cache
+    #     def fourier_coeffs_helper_Landweber(observations: np.ndarray, kernel_function: str):
+    #         futures = []
+    #         for i, fun in enumerate(products):
+    #             futures.append(client.submit(integrate, fun))
+    #         return client.gather(futures)
+    #
+    #     coeffs = fourier_coeffs_helper_Landweber(self.observations, inspect.getsource(self.kernel))
+    #     self.q_fourier_coeffs = np.array(coeffs)
 
-        if self.transformed_measure:
-            def product(function: Callable) -> Callable:
-                return lambda x: q_estimator(x) * function(x) * x
-        else:
-            def product(function: Callable) -> Callable:
-                return lambda x: q_estimator(x) * function(x)
-
-        def integrate(function: Callable) -> float:
-            return quad(function, lower, upper, limit=10000)[0]
-
-        products: Iterable = map(product, self.vs)
-
-        @memory.cache
-        def fourier_coeffs_helper_Landweber(observations: np.ndarray, kernel_function: str):
-            futures = []
-            for i, fun in enumerate(products):
-                futures.append(client.submit(integrate, fun))
-            return client.gather(futures)
-
-        coeffs = fourier_coeffs_helper_Landweber(self.observations, inspect.getsource(self.kernel))
-        self.q_fourier_coeffs = np.array(coeffs)
-
-    def __singular_values(self) -> None:
+    def __adjust_relaxation(self) -> None:
         """
         Collect a max_size number of singular values.
         """
-        sigma: list = [next(self.singular_values) for _ in range(self.max_size)]
-        self.sigmas = np.array(sigma)
-        self.relaxation = 1 / (self.sigmas[0] ** 2) * self.relaxation
-
-    def __singular_functions(self) -> None:
-        """
-        Collect a max_size right singular functions.
-        """
-        self.vs = [next(self.right_singular_functions) for _ in range(self.max_size)]
+        self.relaxation = self.relaxation / (self.singular_values[0] ** 2)
 
     @staticmethod
     def __regularization(lam: np.ndarray, k: int, beta: float) -> np.ndarray:
@@ -591,39 +580,36 @@ class Landweber(EstimatorSpectrum):
         """
         Implementation of Landweber algorithm for inverse problem with stopping rule based on Morozov discrepancy principle.
         """
-        self.__singular_functions()
-        self.__singular_values()
-        self.__find_fourier_coeffs()
+
         self.estimate_delta()
+        self.__adjust_relaxation()
+
+        weighted_ui = np.divide(np.multiply(self.pi, np.square(self.ui)), self.sample_size ** 2)
 
         for k in np.arange(0, self.max_iter):
             regularization = np.square(
-                np.subtract(np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
-                                        np.square(self.sigmas)), 1))
-            weight = np.divide(1, np.square(self.sigmas) + self.rho)
-            coeffs = np.square(self.q_fourier_coeffs)
-            summand = np.sort(np.multiply(weight, np.multiply(regularization, coeffs)), kind='heapsort')
-            residual = np.sqrt(np.sum(summand))
+                np.subtract(np.multiply(self.__regularization(np.square(self.singular_values), k, self.relaxation),
+                                        np.square(self.singular_values)), 1))
+            residual = np.sum(np.sort(np.multiply(weighted_ui, regularization)))
             self.regularization_param = k
-            if residual <= np.sqrt(self.tau) * self.delta:
+            if residual <= self.tau * self.delta:
                 self.residual = residual
                 break
 
-        if self.transformed_measure:
-            def solution(x: float) -> np.ndarray:
-                return np.multiply(x, np.sum(np.multiply(np.multiply(
-                    self.__regularization(np.square(self.sigmas), self.regularization_param, self.relaxation),
-                    self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs]))))
-        else:
-            def solution(x: float) -> np.ndarray:
-                return np.sum(np.multiply(np.multiply(
-                    self.__regularization(np.square(self.sigmas), self.regularization_param, self.relaxation),
-                    self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
+        solution_operator_part = \
+            np.divide(
+                np.multiply(
+                    self.singular_values,
+                    self.__regularization(np.square(self.singular_values), self.regularization_param, self.relaxation)),
+                self.sample_size)
+
+        solution_scalar_part = np.multiply(solution_operator_part, self.ui)
+
+        def solution(x: float) -> np.ndarray:
+            summand = np.multiply(solution_scalar_part, np.array([fun(x) for fun in self.right_singular_functions]))
+            return np.sum(np.sort(summand))
 
         self.solution = np.vectorize(solution)
-
-    def refresh(self) -> None:
-        pass
 
     @timer
     def oracle(self, true: Callable, patience: int = 10) -> None:

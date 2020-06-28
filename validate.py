@@ -16,7 +16,7 @@ def validate_EstimatorSpectrum(kernel: Callable, observations: np.ndarray, sampl
     assert isinstance(observations, np.ndarray), 'Please provide the observations in a form of numpy array'
     assert isinstance(sample_size, int), 'Sample size must be an integer, but was {} provided'.format(sample_size)
     assert (isinstance(max_size, int)) & (max_size > 0), 'Please provide the max size as an integer'
-    assert (isinstance(rho, float)) & (rho >= 0), 'Weight strength must be a positive float, but was {} provided'.format(rho)
+    assert (isinstance(rho, (float, int))) & (rho >= 0), 'Weight strength must be a non-negative float, but {} was provided'.format(rho)
 
 
 def validate_TSVD(tau: Union[int, float], njobs: Optional[int]):

@@ -24,9 +24,16 @@ class EstimatorAbstract(metaclass=ABCMeta):
 
 
 class EstimatorSpectrum(EstimatorAbstract):
-    def __init__(self, kernel: Callable, observations: np.ndarray, sample_size: int, rho: float,
-                 transformed_measure: bool, singular_values: Generator, left_singular_functions: Generator,
-                 right_singular_functions: Generator, max_size: int):
+    def __init__(self,
+                 kernel: Callable,
+                 observations: np.ndarray,
+                 sample_size: int,
+                 rho: float,
+                 transformed_measure: bool,
+                 singular_values: Generator,
+                 left_singular_functions: Generator,
+                 right_singular_functions: Generator,
+                 max_size: int):
 
         validate_EstimatorSpectrum(kernel, observations, sample_size, rho, transformed_measure, singular_values,
                                    left_singular_functions, right_singular_functions, max_size)
@@ -55,7 +62,7 @@ class EstimatorSpectrum(EstimatorAbstract):
         self.__precompute()
 
     def __precompute(self):
-        sigmas = [next(self.singular_values) ** 2 for _ in range(self.max_size)]
+        sigmas = [next(self.singular_values) for _ in range(self.max_size)]
         self.singular_values = np.array(sigmas)
 
         right_f = [next(self.right_singular_functions) for _ in range(self.max_size)]
@@ -64,7 +71,7 @@ class EstimatorSpectrum(EstimatorAbstract):
         left_f = [next(self.left_singular_functions) for _ in range(self.max_size)]
         self.left_singular_functions = left_f
 
-        self.pi = np.divide(self.singular_values, 1 + self.rho * self.singular_values)
+        self.pi = np.divide(np.square(self.singular_values), 1 + self.rho * np.square(self.singular_values))
 
         observations = self.observations
         for i in range(self.max_size):
@@ -102,7 +109,7 @@ class EstimatorSpectrum(EstimatorAbstract):
 
         self.delta = np.divide(np.sum(np.sort(np.multiply(self.pi, self.ui_square))), self.sample_size**2)
 
-        print('Estimated noise level: {}'.format(self.delta))
+        print('Estimated noise level: {}'.format(np.sqrt(self.delta)))
 
     def estimate(self, *args, **kwargs):
         raise NotImplementedError
