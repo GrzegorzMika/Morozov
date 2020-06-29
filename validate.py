@@ -19,19 +19,16 @@ def validate_EstimatorSpectrum(kernel: Callable, observations: np.ndarray, sampl
     assert (isinstance(rho, (float, int))) & (rho >= 0), 'Weight strength must be a non-negative float, but {} was provided'.format(rho)
 
 
-def validate_TSVD(tau: Union[int, float], njobs: Optional[int]):
+def validate_TSVD(tau: Union[int, float]):
     assert (isinstance(tau, (int, float))) & (tau >= 1), 'Wrong tau has been specified'
-    assert njobs is None or isinstance(njobs, int)
 
 
-def validate_Tikhonov(order: int, tau: Union[int, float], njobs: Optional[int]):
+def validate_Tikhonov(order: int, tau: Union[int, float]):
     assert (isinstance(tau, (int, float))) & (tau >= 1), 'Wrong tau has been specified'
     assert (isinstance(order, int)) & (order > 0)
-    assert njobs is None or isinstance(njobs, int)
 
 
-def validate_Landweber(relaxation: Union[int, float], max_iter: int, tau: Union[int, float], njobs: Optional[int]):
+def validate_Landweber(relaxation: Union[int, float], max_iter: int, tau: Union[int, float]):
     assert (isinstance(tau, (int, float))) & (tau >= 1), 'Wrong tau has been specified'
     assert (isinstance(relaxation, (int, float))) & (relaxation > 0)
     assert (isinstance(max_iter, int)) & (max_iter > 0)
-    assert njobs is None or isinstance(njobs, int)

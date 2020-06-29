@@ -272,7 +272,7 @@ class Tikhonov(EstimatorSpectrum):
         :param njobs: Number of threds to be used to calculate Fourier expansion, negative means all available.
         :type njobs: int (default -1)
         """
-        validate_Tikhonov(order, tau, njobs)
+        validate_Tikhonov(order, tau)
         EstimatorSpectrum.__init__(self, kernel, observations, sample_size, transformed_measure, rho, lower, upper)
         self.kernel: Callable = kernel
         self.singular_values: Generator = singular_values
@@ -499,7 +499,7 @@ class Landweber(EstimatorSpectrum):
         :param max_size: Maximum number of functions included in Fourier expansion.
         :type max_size: int (default 1000)
         """
-        validate_Landweber(relaxation, max_iter, tau, njobs)
+        validate_Landweber(relaxation, max_iter, tau)
 
         EstimatorSpectrum.__init__(self, kernel, observations, sample_size, rho, transformed_measure, singular_values,
                                    left_singular_functions, right_singular_functions, max_size)
@@ -605,9 +605,15 @@ class Landweber(EstimatorSpectrum):
 
         solution_scalar_part = np.multiply(solution_operator_part, self.ui)
 
-        def solution(x: float) -> np.ndarray:
-            summand = np.multiply(solution_scalar_part, np.array([fun(x) for fun in self.right_singular_functions]))
-            return np.sum(np.sort(summand))
+        if self.transformed_measure:
+            def solution(x: float) -> np.ndarray:
+                summand = np.multiply(solution_scalar_part,
+                                      np.array([fun(x) * x for fun in self.right_singular_functions]))
+                return np.sum(np.sort(summand))
+        else:
+            def solution(x: float) -> np.ndarray:
+                summand = np.multiply(solution_scalar_part, np.array([fun(x) for fun in self.right_singular_functions]))
+                return np.sum(np.sort(summand))
 
         self.solution = np.vectorize(solution)
 
