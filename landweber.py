@@ -4,26 +4,26 @@ import pandas as pd
 from EstimatorSpectrum import Landweber
 from Generator import LSW
 from SVD import LordWillisSpektor
-from test_functions import kernel_transformed, BETA
+from test_functions import kernel_transformed, BIMODAL, BETA, SMLA, SMLB
 
-replications = 1
-size = [10000]
-max_size = 50
-max_iter = 300
-functions = [BETA]
-functions_name = ['BETA']
-taus = [i for i in range(1, 1000, 5)]
-taus_name = [str(t) for t in taus]
-rhos = [2 ** i for i in range(-5, 15)]
-rhos_name = [str(r)[:10] for r in rhos]
+replications = 10
+size = [100000]
+max_size = 200
+functions = [BIMODAL, BETA, SMLA, SMLB]
+functions_name = ['BIMODAL', 'BETA', 'SMLA', 'SMLB']
+taus = [1]
+taus_name = ['1']
+rhos = [0]
+rhos_name = ['0']
 
 if __name__ == '__main__':
     for s in size:
         for i, fun in enumerate(functions):
             for j, tau in enumerate(taus):
-                for r, rho in enumerate(rhos):
+                for k, rho in enumerate(rhos):
                     generator = LSW(pdf=fun, sample_size=s, seed=914)
-                    results = {'selected_param': [],'loss': [], 'solution': []}
+                    results = {'selected_param': [], 'oracle_param': [], 'oracle_loss': [], 'loss': [], 'solution': [],
+                               'oracle_solution': []}
                     for _ in range(replications):
                         spectrum = LordWillisSpektor(transformed_measure=True)
                         obs = generator.generate()
@@ -31,13 +31,15 @@ if __name__ == '__main__':
                                               left_singular_functions=spectrum.left_functions,
                                               right_singular_functions=spectrum.right_functions,
                                               observations=obs, sample_size=s, max_size=max_size, tau=tau,
-                                              max_iter=max_iter, transformed_measure=True, rho=rho, njobs=-1)
+                                              transformed_measure=True, rho=rho, max_iter=1000)
                         landweber.estimate()
-                        landweber.oracle(fun)
+                        landweber.oracle(fun, patience=10)
                         solution = list(landweber.solution(np.linspace(0, 1, 10000)))
                         results['selected_param'].append(landweber.regularization_param)
+                        results['oracle_param'].append(landweber.oracle_param)
+                        results['oracle_loss'].append(landweber.oracle_loss)
                         results['loss'].append(landweber.residual)
                         results['solution'].append(solution)
-                        landweber.client.close()
-                    pd.DataFrame(results).to_csv(
-                        'Weighted_Landweber_rho_{}_tau_{}.csv'.format(rhos_name[r], taus_name[j]))
+                        results['oracle_solution'].append(list(landweber.oracle_solution))
+                        pd.DataFrame(results).to_csv(
+                            'Landweber_rho_{}_tau_{}_size_{}_fun_{}'.format(rhos_name[k], taus_name[j], s, functions_name[i]))

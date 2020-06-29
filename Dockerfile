@@ -8,8 +8,6 @@ RUN pip install -r /home/Morozov/requirements.txt
 
 WORKDIR /home/Morozov
 
-RUN mkdir /home/Morozov/cachedir
-
 COPY . .
 
 CMD python3 simulation.py && python3 -c "from utils import upload; upload()"
