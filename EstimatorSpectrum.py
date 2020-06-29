@@ -516,42 +516,6 @@ class Landweber(EstimatorSpectrum):
         self.residual: Optional[float] = None
         self.solution: Optional[Callable] = None
 
-    # @timer
-    # def __find_fourier_coeffs(self) -> None:
-    #     """
-    #     Calculate max_size Fourier coefficients of a q estimator with respect the the right singular functions of an operator.
-    #     Coefficients are calculated in parallel using the dask backend, the progress is displayed on Dask dashbord running
-    #     by default on localhost://8787.
-    #     """
-    #     self.estimate_q()
-    #     print('Calculation of Fourier coefficients of q estimator...')
-    #     q_estimator: Callable = self.q_estimator
-    #     lower: float = self.lower
-    #     upper: float = self.upper
-    #     client = self.client
-    #
-    #     if self.transformed_measure:
-    #         def product(function: Callable) -> Callable:
-    #             return lambda x: q_estimator(x) * function(x) * x
-    #     else:
-    #         def product(function: Callable) -> Callable:
-    #             return lambda x: q_estimator(x) * function(x)
-    #
-    #     def integrate(function: Callable) -> float:
-    #         return quad(function, lower, upper, limit=10000)[0]
-    #
-    #     products: Iterable = map(product, self.vs)
-    #
-    #     @memory.cache
-    #     def fourier_coeffs_helper_Landweber(observations: np.ndarray, kernel_function: str):
-    #         futures = []
-    #         for i, fun in enumerate(products):
-    #             futures.append(client.submit(integrate, fun))
-    #         return client.gather(futures)
-    #
-    #     coeffs = fourier_coeffs_helper_Landweber(self.observations, inspect.getsource(self.kernel))
-    #     self.q_fourier_coeffs = np.array(coeffs)
-
     def __adjust_relaxation(self) -> None:
         """
         Collect a max_size number of singular values.
@@ -637,16 +601,25 @@ class Landweber(EstimatorSpectrum):
         for k in np.arange(0, self.max_iter):
             parameters.append(k)
 
+            solution_operator_part = \
+                np.divide(
+                    np.multiply(
+                        self.singular_values,
+                        self.__regularization(np.square(self.singular_values), k, self.relaxation)),
+                    self.sample_size)
+
+            solution_scalar_part = np.multiply(solution_operator_part, self.ui)
+
             if self.transformed_measure:
                 def solution(x: float) -> np.ndarray:
-                    return np.multiply(x, np.sum(np.multiply(
-                        np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
-                                    self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs]))))
+                    summand = np.multiply(solution_scalar_part,
+                                          np.array([fun(x) * x for fun in self.right_singular_functions]))
+                    return np.sum(np.sort(summand))
             else:
                 def solution(x: float) -> np.ndarray:
-                    return np.sum(np.multiply(
-                        np.multiply(self.__regularization(np.square(self.sigmas), k, self.relaxation),
-                                    self.q_fourier_coeffs), np.array([fun(x) for fun in self.vs])))
+                    summand = np.multiply(solution_scalar_part,
+                                          np.array([fun(x) for fun in self.right_singular_functions]))
+                    return np.sum(np.sort(summand))
 
             solution = np.vectorize(solution)
             oracle_solutions.append(solution(np.linspace(0, 1, 10000)))
