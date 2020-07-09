@@ -1,0 +1,31 @@
+docker build --rm -t landweber_beta_big_rho -f s_Dockerfile_landweber_beta .
+docker build --rm -t landweber_smla_big_rho -f s_Dockerfile_landweber_smla .
+docker build --rm -t landweber_smlb_big_rho -f s_Dockerfile_landweber_smlb .
+docker build --rm -t landweber_bimodal_big_rho -f s_Dockerfile_landweber_bimodal .
+
+docker build --rm -t tsvd_beta_big_rho -f s_Dockerfile_tsvd_beta .
+docker build --rm -t tsvd_smla_big_rho -f s_Dockerfile_tsvd_smla .
+docker build --rm -t tsvd_smlb_big_rho -f s_Dockerfile_tsvd_smlb .
+docker build --rm -t tsvd_bimodal_big_rho -f s_Dockerfile_tsvd_bimodal .
+
+docker build --rm -t tikhonov_beta_big_rho -f s_Dockerfile_tikhonov_beta .
+docker build --rm -t tikhonov_smla_big_rho -f s_Dockerfile_tikhonov_smla .
+docker build --rm -t tikhonov_smlb_big_rho -f s_Dockerfile_tikhonov_smlb .
+docker build --rm -t tikhonov_bimodal_big_rho -f s_Dockerfile_tikhonov_bimodal .
+
+
+
+docker run -d --security-opt seccomp=unconfined landweber_beta_big_rho:latest
+docker run -d --security-opt seccomp=unconfined landweber_smla_big_rho:latest
+docker run -d --security-opt seccomp=unconfined landweber_smlb_big_rho:latest
+docker run -d --security-opt seccomp=unconfined landweber_bimodal_big_rho:latest
+
+docker run -d --security-opt seccomp=unconfined tsvd_beta_big_rho:latest
+docker run -d --security-opt seccomp=unconfined tsvd_smla_big_rho:latest
+docker run -d --security-opt seccomp=unconfined tsvd_smlb_big_rho:latest
+docker run -d --security-opt seccomp=unconfined tsvd_bimodal_big_rho:latest
+
+docker run -d --security-opt seccomp=unconfined tikhonov_beta_big_rho:latest
+docker run -d --security-opt seccomp=unconfined tikhonov_smla_big_rho:latest
+docker run -d --security-opt seccomp=unconfined tikhonov_smlb_big_rho:latest
+docker run -d --security-opt seccomp=unconfined tikhonov_bimodal_big_rho:latest

@@ -133,9 +133,7 @@ class TSVD(EstimatorSpectrum):
         def residual(solution):
             return lambda x: np.square(true(x) - solution(x))
 
-        selected = max(0, self.singular_values.tolist().index(self.regularization_param) - 10)
-
-        for alpha in np.square(self.singular_values[selected:]):
+        for alpha in np.square(self.singular_values):
             parameters.append(alpha)
 
             solution_operator_part = \
@@ -287,7 +285,7 @@ class Tikhonov(EstimatorSpectrum):
 
         for alpha in self.grid:
             regularization = np.square(
-                np.subtract(np.multiply(self.__regularization(np.square(self.singular_values), alpha),
+                np.subtract(np.multiply(self.__regularization(np.square(self.singular_values), alpha, self.order),
                                         np.square(self.singular_values)), 1))
             residual = np.sum(np.sort(np.multiply(weighted_ui, regularization)))
             self.regularization_param = alpha
@@ -299,7 +297,7 @@ class Tikhonov(EstimatorSpectrum):
             np.divide(
                 np.multiply(
                     self.singular_values,
-                    self.__regularization(np.square(self.singular_values), self.regularization_param)),
+                    self.__regularization(np.square(self.singular_values), self.regularization_param, self.order)),
                 self.sample_size)
 
         solution_scalar_part = np.multiply(solution_operator_part, self.ui)
@@ -332,17 +330,14 @@ class Tikhonov(EstimatorSpectrum):
         def residual(solution):
             return lambda x: np.square(true(x) - solution(x))
 
-        start_point = max(0, self.grid.tolist().index(
-            self.regularization_param) - 20) if self.regularization_param != 0 else 1
-
-        for alpha in self.grid[start_point:]:
+        for alpha in self.grid:
             parameters.append(alpha)
 
             solution_operator_part = \
                 np.divide(
                     np.multiply(
                         self.singular_values,
-                        self.__regularization(np.square(self.singular_values), alpha)),
+                        self.__regularization(np.square(self.singular_values), alpha, self.order)),
                     self.sample_size)
 
             solution_scalar_part = np.multiply(solution_operator_part, self.ui)
@@ -379,7 +374,7 @@ class Tikhonov(EstimatorSpectrum):
             np.divide(
                 np.multiply(
                     self.singular_values,
-                    self.__regularization(np.square(self.singular_values), self.oracle_param)),
+                    self.__regularization(np.square(self.singular_values), self.oracle_param, self.order)),
                 self.sample_size)
 
         solution_scalar_part = np.multiply(solution_operator_part, self.ui)
@@ -538,7 +533,6 @@ class Landweber(EstimatorSpectrum):
         :param patience: Number of consecutive iterations to observe the loss behavior after the minimum was found to
         prevent to stack in local minimum (default: 5).
         """
-        from tqdm import tqdm
         losses = []
         parameters = []
         best_loss = np.inf
@@ -549,7 +543,7 @@ class Landweber(EstimatorSpectrum):
 
         start_k = self.regularization_param // 2 if self.regularization_param != self.max_iter else 0
 
-        for k in tqdm(np.arange(start_k, self.max_iter)):
+        for k in np.arange(start_k, self.max_iter):
             parameters.append(k)
 
             solution_operator_part = \
