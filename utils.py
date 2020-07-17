@@ -86,7 +86,8 @@ def plot_results(file_name, true, plot_lim):
     plt.clf()
 
 
-def filter_files(method='Landweber', size='10000', function='BIMODAL', tau='10', date1='2020-07-08', date2='2020-07-08'):
+def filter_files(method='Landweber', size='10000', function='BIMODAL', tau='10', date1='2020-07-08',
+                 date2='2020-07-08'):
     files = os.listdir('results/')
     files = [f for f in files if 'csv' in f]
     files = [f for f in files if 'Test' not in f]
@@ -99,3 +100,40 @@ def filter_files(method='Landweber', size='10000', function='BIMODAL', tau='10',
     for f in files:
         print(f)
     return files, function
+
+
+def plot_comparison(files, labels=None, title=None):
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import os
+    import numpy as np
+    from collections import defaultdict
+
+    data = defaultdict()
+    for f in files:
+        data[f] = pd.read_csv(os.path.join('results', f))
+
+    losses = [np.sqrt(data[key].loss) for key in data.keys()]
+
+    plt.rcParams['figure.figsize'] = 10, 10
+    plt.style.use('seaborn-white')
+    fig, ax = plt.subplots()
+    ax.boxplot(losses)
+    if labels is not None:
+        ax.set_xticklabels(labels)
+    else:
+        ax.set_xticklabels(files)
+    ax.tick_params(axis='both', which='major', labelsize=16)
+    ax.tick_params(axis='x', rotation=30)
+    plt.ylabel('Loss', fontsize=16)
+    plt.xlabel('lambda', fontsize=16)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    if title is not None:
+        plt.title(title, fontsize=16)
+
+
+def sort_rho(files):
+    rho = {f: int(f.split('_')[2]) for f in files}
+    rho = {k: v for k, v in sorted(rho.items(), key=lambda item: item[1])}
+    return list(rho.keys())
