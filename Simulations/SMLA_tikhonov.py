@@ -11,7 +11,7 @@ from Generator import LSW
 from SVD import LordWillisSpektor
 
 replications = 10
-size = [1000000]
+size = [10000]
 max_size = 50
 order = 2
 functions = [SMLA]
