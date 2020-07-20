@@ -11,18 +11,18 @@ from Generator import LSW
 from SVD import LordWillisSpektor
 
 replications = 10
-size = [1000000]
+size = [2000, 10000, 1000000]
 max_size = 50
 functions = [SMLB]
 functions_name = ['SMLB']
-taus = [1]
-taus_name = ['1']
+taus = [1.4]
+taus_name = ['14']
 
 if __name__ == '__main__':
     for s in size:
         for i, fun in enumerate(functions):
             for j, tau in enumerate(taus):
-                generator = LSW(pdf=fun, sample_size=s, seed=914)
+                generator = LSW(pdf=fun, sample_size=s, seed=913)
                 results = {'selected_param': [], 'oracle_param': [], 'oracle_loss': [], 'loss': [], 'solution': [],
                            'oracle_solution': []}
                 for _ in range(replications):

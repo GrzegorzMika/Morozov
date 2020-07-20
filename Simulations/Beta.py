@@ -16,14 +16,14 @@ max_size = 50
 max_iter = 1000
 functions = [BETA]
 functions_name = ['BETA']
-taus = [1., 1.1, 1.2, 1.3]
-taus_name = ['10', '11', '12', '13']
+taus = [1.1]
+taus_name = ['11']
 
 if __name__ == '__main__':
     for s in size:
         for i, fun in enumerate(functions):
             for j, tau in enumerate(taus):
-                generator = LSW(pdf=fun, sample_size=s, seed=914)
+                generator = LSW(pdf=fun, sample_size=s, seed=913)
                 results = {'selected_param': [], 'oracle_param': [], 'oracle_loss': [], 'loss': [], 'solution': [],
                            'oracle_solution': []}
                 for _ in range(replications):

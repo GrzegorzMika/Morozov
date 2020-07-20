@@ -1,9 +1,0 @@
-docker build -t bimodal_tikhonov -f Dockerfile_bimodal_tikhonov .
-docker build -t beta_tikhonov -f Dockerfile_beta_tikhonov .
-docker build -t smla_tikhonov -f Dockerfile_smla_tikhonov .
-docker build -t smlb_tikhonov -f Dockerfile_smlb_tikhonov .
-
-docker run -d -v cachedir:/home/Morozov/cachedir --security-opt seccomp=unconfined bimodal_tikhonov:latest
-docker run -d -v cachedir:/home/Morozov/cachedir --security-opt seccomp=unconfined beta_tikhonov:latest
-docker run -d -v cachedir:/home/Morozov/cachedir --security-opt seccomp=unconfined smla_tikhonov:latest
-docker run -d -v cachedir:/home/Morozov/cachedir --security-opt seccomp=unconfined smlb_tikhonov:latest
